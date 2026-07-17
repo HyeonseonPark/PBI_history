@@ -24,14 +24,152 @@
 [edgeR DE_results, 클러스터링/히트맵 등 최종 산출물]
 ```
 
-| 스텝 | 소프트웨어(버전) | 핵심 파라미터 | Input | Output |
-|---|---|---|---|---|
-| QC/Trim | 프로젝트별 상이(아래 2번 섹션 참고) | 프로젝트별 상이 | Raw FASTQ R1/R2 | Clean FASTQ R1/R2 |
-| HISAT2 정렬 | HISAT2 2.2.1 (전 프로젝트 공통 확인) | `--rna-strandness RF` (공통 확인), 스레드 수(`-p`)는 프로젝트별 상이 | Clean FASTQ + HISAT2 index | Sorted BAM(.bai) |
-| StringTie 정량 | StringTie 3.0.0 (전 프로젝트 공통 확인) | `-eB --rf -G <참조 GTF/GFF3>` (ballgown 모드) | Sorted BAM + 참조 GTF/GFF3 | 샘플별 `transcripts.gtf`, `gene_abund.tab`, `*.ctab` |
-| Count/TPM matrix 생성 | prepDE.py3 계열(공통, 세부 변형은 프로젝트별 상이) + TPM 추출 스크립트(TPM_extraction.py 또는 stringtie_expression_matrix.pl, 프로젝트별 상이) | 기본값 사용(확인 필요 항목 다수) | 샘플별 ctab/gene_abund.tab | `gene_count_matrix.csv`, `transcript_count_matrix.csv`, TPM matrix |
-| TMM 정규화 | R edgeR `calcNormFactors` — 3/4 프로젝트 확인(Panax_ginseng_Light_mrRNA-seq은 관련 스크립트 자체가 프로젝트 내에 없음) | 기본 TMM 옵션 | count/TPM matrix | `TMM.EXPR.matrix`, `*.TMM_info.txt` |
-| edgeR 차등발현분석 | Trinity util(run_DE_analysis.pl 계열) + R edgeR `exactTest` — 3/4 프로젝트 확인(Panax_ginseng_Light_mrRNA-seq은 DEG 분석 디렉토리가 비어 있어 미수행으로 확인됨) | `cpm(matrix)>1 in ≥2 samples` 필터, pairwise exactTest; P-value/log2FC cutoff는 프로젝트별 상이(아래 2번 섹션 참고) | count matrix + samples.file | `*.edgeR.DE_results`, `*.subset`, MA/Volcano plot, 클러스터링/히트맵 |
+### Step QC/Trim
+- **소프트웨어(버전):** 프로젝트별 상이(아래 2번 섹션 참고)
+- **핵심 파라미터:** 프로젝트별 상이
+- **Input:** Raw FASTQ R1/R2
+- **Output:** Clean FASTQ R1/R2
+- **실행 커맨드:**
+  - 123w (Trimmomatic → PRINSEQ++ 2단계):
+    ```bash
+    java -jar trimmomatic-0.40.jar PE -threads 200 -summary <sample>.stat <R1> <R2> <paired_1> <unpaired_1> <paired_2> <unpaired_2> ILLUMINACLIP:TruSeq3-PE-2.fa:2:30:10:2:keepBothReads LEADING:10 TRAILING:10 MINLEN:50
+    prinseq++ -fastq <paired_1> -fastq2 <paired_2> -out_name <sample> -threads 200 -trim_qual_left 15 -trim_qual_right 15 -trim_qual_window 5 -trim_qual_step 1 -min_len 50 -min_qual_mean 15 -ns_max_n 0 -lc_dust 7 -derep 14
+    ```
+  - Heatstress (fastp.sh, 이후 multiqc):
+    ```bash
+    fastp --in1 <sample>_R1.fastq.gz --in2 <sample>_R2.fastq.gz --out1 clean_data/<sample>_clean_R1.fastq.gz --out2 clean_data/<sample>_clean_R2.fastq.gz --detect_adapter_for_pe --cut_front --cut_tail --cut_window_size 4 --cut_mean_quality 20 --dedup --compression 4 --thread 100 --html qc_reports/<sample>_fastp.html --json qc_reports/<sample>_fastp.json
+    multiqc qc_reports/ -o multiqc_result
+    ```
+  - Light (wrapper 스크립트 없음, `cleaning/fastp.log`에서 재구성; 이후 MultiQC 자동 실행):
+    ```bash
+    fastp --in1 <sample>_R1_001.fastq.gz --in2 <sample>_R2_001.fastq.gz --out1 clean_data/<sample>_clean_R1.fastq.gz --out2 clean_data/<sample>_clean_R2.fastq.gz --detect_adapter_for_pe --cut_front --cut_tail --cut_window_size 4 --cut_mean_quality 20 --dedup --compression 4 --thread 100 --html qc_reports/<sample>_fastp.html --json qc_reports/<sample>_fastp.json
+    ```
+  - Zoysia (prinseq.sh, 샘플별 백그라운드 병렬 실행):
+    ```bash
+    prinseq-lite -fastq <R1>.fastq -fastq2 <R2>.fastq -out_format 3 -out_good prinseq_good_results/<sample>good -out_bad prinseq_bad_results/<sample>bad -log <sample>.log -min_len 50 -min_qual_score 5 -min_qual_mean 15 -derep 14 -trim_qual_left 15 -trim_qual_right 15 &
+    ```
+
+### Step HISAT2 정렬
+- **소프트웨어(버전):** HISAT2 2.2.1 (전 프로젝트 공통 확인)
+- **핵심 파라미터:** `--rna-strandness RF` (공통 확인), 스레드 수(`-p`)는 프로젝트별 상이
+- **Input:** Clean FASTQ + HISAT2 index
+- **Output:** Sorted BAM(.bai)
+- **실행 커맨드:**
+  - 123w (Step1.sh 내 주석 처리된 블록으로 남아있으나, 핸드오버 문서 교차검증상 실제 실행된 커맨드로 확인됨):
+    ```bash
+    hisat2 -p 100 --summary-file <sample>.summary -x genome_tran -1 <sample>_good_1.fastq -2 <sample>_good_2.fastq -S <sample>.sam
+    samtools view -b ... | samtools sort ... | samtools index ...
+    ```
+  - Heatstress (Step1.sh):
+    ```bash
+    hisat2 -p 128 --summary-file <sample>.summary --rna-strandness RF -x genome_tran -1 <sample>_clean_R1.fastq.gz -2 <sample>_clean_R2.fastq.gz -S <sample>.sam
+    samtools view -@ 128 -bS ...
+    samtools sort -@ 128 ...
+    samtools index ...
+    ```
+  - Light (Step1.sh, Heatstress와 동일 템플릿):
+    ```bash
+    hisat2 -p 128 --summary-file <sample>.summary --rna-strandness RF -x genome_tran -1 <sample>_clean_R1.fastq.gz -2 <sample>_clean_R2.fastq.gz -S <sample>.sam
+    # samtools view/sort/index 동일
+    ```
+  - Zoysia (hisat2.sh, Zs 기준; `--rna-strandness` 옵션 미사용):
+    ```bash
+    hisat2 -x genome_tran -p 150 -1 <sample>_good_1.fastq -2 <sample>_good_2.fastq -S <sample>_hisat2.sam
+    samtools view -bh ...
+    samtools sort ...
+    samtools index ...
+    ```
+
+### Step StringTie 정량
+- **소프트웨어(버전):** StringTie 3.0.0 (전 프로젝트 공통 확인)
+- **핵심 파라미터:** `-eB --rf -G <참조 GTF/GFF3>` (ballgown 모드)
+- **Input:** Sorted BAM + 참조 GTF/GFF3
+- **Output:** 샘플별 `transcripts.gtf`, `gene_abund.tab`, `*.ctab`
+- **실행 커맨드:**
+  - 123w (Step1.sh):
+    ```bash
+    stringtie -eB -G Pg_genome.gtf -A <sample>/gene_abund.tab -o <sample>/<sample>.gtf -p 100 <sample>_sorted.bam
+    ```
+  - Heatstress (Step1.sh):
+    ```bash
+    stringtie -eB -G snufc-Pg-07-Chunpoong.liftoff.validORF.gtf -A <sample>/gene_abund.tab -o <sample>/<sample>.gtf --rf -p 128 <sample>_sorted.bam
+    ```
+  - Light (Step1.sh):
+    ```bash
+    stringtie -eB -G snufc-Pg-02-Geumsun.liftoff.validORF_longest.gtf -A <sample>/gene_abund.tab -o <sample>/<sample>.gtf --rf -p 128 <sample>_sorted.bam
+    ```
+  - Zoysia (module04_stringtie.sh, Zs 기준; `--rf` 옵션 미사용):
+    ```bash
+    stringtie -eB -G Zsg_manualcurated_longest_nomRNA.gff3 -A <sample>/gene_abundances.tsv -o <sample>/transcripts.gtf -p 150 <sample>_hisat2.sorted.bam
+    ```
+
+### Step Count/TPM matrix 생성
+- **소프트웨어(버전):** prepDE.py3 계열(공통, 세부 변형은 프로젝트별 상이) + TPM 추출 스크립트(TPM_extraction.py 또는 stringtie_expression_matrix.pl, 프로젝트별 상이)
+- **핵심 파라미터:** 기본값 사용(확인 필요 항목 다수)
+- **Input:** 샘플별 ctab/gene_abund.tab
+- **Output:** `gene_count_matrix.csv`, `transcript_count_matrix.csv`, TPM matrix
+- **실행 커맨드:**
+  - 123w:
+    ```bash
+    python3 TPM_extraction.py   # Alignment/ 내 <sample>/gene_abund.tab 순회
+    prepDE.py3   # 로컬 wrapper 없이 대화형 실행, gene/transcript_count_matrix.csv 산출, 정확한 인자 로그 없음
+    python3 matrix_preprocess.py
+    ```
+  - Heatstress (DEG_analysis/ 내; 버그 수정본이 존재하나 최종 채택은 원본 prepDE.py 대화형 실행분 — 연구자 확인):
+    ```bash
+    python3 prepDE_fixed.py3 -i .
+    python3 TPM_extraction.py
+    ```
+  - Light (로컬 wrapper 없이 대화형 실행, 정확한 인자 로그 없음):
+    ```bash
+    prepDE.py3 -i <stringtie 샘플 디렉토리 목록> -g gene_count_matrix.csv -t transcript_count_matrix.csv
+    python3 TPM_extraction.py   # Alignment/ 내에서 실행
+    ```
+  - Zoysia (Hisat2_Zs/ 등 각 트랙 내; `--result_dirs` 정확한 인자 순서는 확인 필요):
+    ```bash
+    python3 module05_prepDE_after_Stringtie.py3   # 인자 없이 기본값 사용 추정
+    perl stringtie_expression_matrix.pl --expression_metric=TPM --result_dirs='<sample1>,<sample2>,...' --transcript_matrix_file=transcript_tpms_all_samples.tsv --gene_matrix_file=gene_tpms_all_samples.tsv
+    ```
+
+### Step TMM 정규화
+- **소프트웨어(버전):** R edgeR `calcNormFactors` — 3/4 프로젝트 확인(Panax_ginseng_Light_mrRNA-seq은 관련 스크립트 자체가 프로젝트 내에 없음)
+- **핵심 파라미터:** 기본 TMM 옵션
+- **Input:** count/TPM matrix
+- **Output:** `TMM.EXPR.matrix`, `*.TMM_info.txt`
+- **실행 커맨드:**
+  - 123w (내부: `read.table("gene_count_matrix.csv", ...)` → `DGEList` → `calcNormFactors()` → `TMM_info.txt` 저장):
+    ```bash
+    Rscript gene_count_matrix.csv.runTMM.R
+    ```
+  - Heatstress (동일 로직; `.csv` 버전은 `sep=','` 미지정으로 파싱 실패한 것으로 추정, 대응 출력 없음):
+    ```bash
+    Rscript gene_count_matrix.tsv.runTMM.R
+    ```
+  - Light: 확인 필요 — 스크립트 파일 없음(미수행 — 확인 필요)
+  - Zoysia (Zs 기준, 동일 로직):
+    ```bash
+    Rscript transcript_tpms_all_samples.tsv.runTMM.R
+    ```
+
+### Step edgeR 차등발현분석
+- **소프트웨어(버전):** Trinity util(run_DE_analysis.pl 계열) + R edgeR `exactTest` — 3/4 프로젝트 확인(Panax_ginseng_Light_mrRNA-seq은 DEG 분석 디렉토리가 비어 있어 미수행으로 확인됨)
+- **핵심 파라미터:** `cpm(matrix)>1 in ≥2 samples` 필터, pairwise exactTest; P-value/log2FC cutoff는 프로젝트별 상이(아래 2번 섹션 참고)
+- **Input:** count matrix + samples.file
+- **Output:** `*.edgeR.DE_results`, `*.subset`, MA/Volcano plot, 클러스터링/히트맵
+- **실행 커맨드:**
+  - 123w (Trinity 자동생성; 내부 `rnaseqMatrix[rowSums(cpm(rnaseqMatrix)>1)>=2,]` 필터 → `calcNormFactors` → `estimateDisp` → `exactTest(pair=c("1w","REST"))`, 1w/2w/3w_vs_REST + Default 조합 반복):
+    ```bash
+    Rscript genes.counts.matrix.1w_vs_REST.1w.vs.REST.EdgeR.Rscript
+    ```
+  - Heatstress (Trinity `run_DE_analysis.pl` 자동생성, 6그룹 15개 pairwise 조합 반복, 동일 cpm 필터+exactTest):
+    ```bash
+    Rscript gene_count_matrix.tsv.<A>_vs_<B>.EdgeR.Rscript
+    ```
+  - Light: (미수행 — 확인 필요, `DEG_anaylsis/` 디렉토리 비어 있고 edgeR 관련 스크립트 전무)
+  - Zoysia (Trinity `run_DE_analysis.pl` 자동생성, Zs 기준; 동일 cpm 필터+exactTest, P0.01/C1 위주 + 일부 P0.001/C2 병행):
+    ```bash
+    Rscript transcript_count_matrix.tsv.<A>_vs_<B>.EdgeR.Rscript
+    ```
 
 ## 2. 프로젝트별 특이사항
 
@@ -72,10 +210,10 @@
   - Zs(Z. sinica)에 한해서만 Trinity 고정높이 서브클러스터링(P=30) 및 클러스터별 fpkm matrix 생성 수행(Zj/Zj_contig는 서브클러스터링 미실시로 확인)
   - Zj/Zs 각각에 대해 Z-score 행렬 생성(Z-scoring_TPM_matrix.py, log2(TPM+1) 후 유전자별 z-score) — Zj_contig는 스크립트만 존재하고 실제 실행/output 확인 안 됨(확인 필요)
 - (해당 시) 프로젝트 고유 확장 분석: 이 프로젝트는 Track A(공통 RNA-seq 1차 처리) 외에 4개의 독립 확장 트랙(Track B~E)을 보유함
-  - Track B (TF_Prediction): Track A의 Zs 서브클러스터1 결과를 기반으로 TSS 좌표 추출(±2000/100bp) 후 bed→fasta 추출(사용 툴 미확인) 및 TF 후보 유전자군 트리(OG0006158) 구성 — 다수 단계의 생성 스크립트/선정 기준이 확인 필요로 남아 있음
-  - Track C (Zoysia_Interspecies_Transcriptomic_analysis): Track A의 Zj·Zs 단백질 서열을 reciprocal BLASTP로 매칭 → 매칭 서브셋 count/TPM matrix 병합(Matrix_merge.py) → TMM 정규화 → 그룹별(Control/Salt_Treatment/Whole) Trinity/edgeR 종간 비교 DE 분석(Whole은 4그룹 전체 6개 쌍별 비교 + 서브클러스터링) → Z-score 행렬 생성
-  - Track D (Salt_transporters, 12sp/12sp_Zj_COM): 외부 12종 orthogroup 단백질 세트에 대해 InterProScan(v5.74-105.0) 도메인 스캔 → 종별/전체종 도메인 presence·count 통계 산출 — 본 프로젝트 rawdata와 직접 연결되지 않는 2차 비교분석으로 확인됨
-  - Track E (Zoysia_ENTAP): Track A 유래 단백질 서열(ZJN pseudochromosome, ZJN contig)과 외부 3종(Oryza_sativa, ZMW=Z. matrella, ZPZ=Z. pacifica) 단백질에 대해 EnTAP v2.2.0(DIAMOND+EggNOG-mapper) 기능 어노테이션 수행 → 일부 종(ZJN_pseudochromosome)만 TBtools 포맷팅 추가 수행 → DE 결과와 ENTAP 주석 결합(결합 스크립트는 저장소에 없어 수동 join으로 추정)
+  - Track B (TF_Prediction): Track A의 Zs 서브클러스터1 결과를 기반으로 TSS 좌표 추출(±2000/100bp) 후 bed→fasta 추출(사용 툴 미확인) 및 TF 후보 유전자군 트리(OG0006158) 구성 — 다수 단계의 생성 스크립트/선정 기준이 확인 필요로 남아 있음. 실행 커맨드: `bash TSS_extraction.sh`(TF_Prediction/, `Zs_subcluster_1.id`의 gene id로 gff3에서 `+`가닥은 TSS-2000~+100, `-`가닥은 -100~+2000 좌표 추출)
+  - Track C (Zoysia_Interspecies_Transcriptomic_analysis): Track A의 Zj·Zs 단백질 서열을 reciprocal BLASTP로 매칭 → 매칭 서브셋 count/TPM matrix 병합(Matrix_merge.py) → TMM 정규화 → 그룹별(Control/Salt_Treatment/Whole) Trinity/edgeR 종간 비교 DE 분석(Whole은 4그룹 전체 6개 쌍별 비교 + 서브클러스터링) → Z-score 행렬 생성. 실행 커맨드: `python3 Matrix_merge.py`(하드코딩된 `Zj_matched_Only_Zs_transcript_count_matrix.tsv`/`Zs_matched_Only_Zj_transcript_count_matrix.tsv`를 `transcript_id` 기준 inner join) → `Rscript Zs_Zj_merged_tpm_matrix.tsv.runTMM.R`(edgeR calcNormFactors) → `Rscript transcript_count_matrix.tsv.<A>_vs_<B>.EdgeR.Rscript`(Trinity 자동생성, 그룹별 반복)
+  - Track D (Salt_transporters, 12sp/12sp_Zj_COM): 외부 12종 orthogroup 단백질 세트에 대해 InterProScan(v5.74-105.0) 도메인 스캔 → 종별/전체종 도메인 presence·count 통계 산출 — 본 프로젝트 rawdata와 직접 연결되지 않는 2차 비교분석으로 확인됨. 실행 커맨드: `interproscan.sh -i <orthogroup>.fa -f tsv -cpu 200 --outfile <orthogroup>.tsv -dp -appl Phobius -iprlookup &`(InterProScan.sh, orthogroup별 백그라운드 병렬 실행) → `python3 Domain_statistics.py` → `python3 Domain_statistics_all_species.py`
+  - Track E (Zoysia_ENTAP): Track A 유래 단백질 서열(ZJN pseudochromosome, ZJN contig)과 외부 3종(Oryza_sativa, ZMW=Z. matrella, ZPZ=Z. pacifica) 단백질에 대해 EnTAP v2.2.0(DIAMOND+EggNOG-mapper) 기능 어노테이션 수행 → 일부 종(ZJN_pseudochromosome)만 TBtools 포맷팅 추가 수행 → DE 결과와 ENTAP 주석 결합(결합 스크립트는 저장소에 없어 수동 join으로 추정). 실행 커맨드: `EnTAP --run --run-ini entap_run.params --entap-ini entap_config.ini`(ENTAP.sh, Oryza_sativa→ZJN→ZMW→ZPZ 순으로 각 종 디렉토리에서 반복 실행) → `python3 TBtools_formating.py`(ZJN_pseudochromosome/final_results/에서만 실행 확인)
 
 ## 3. 요약 비교표
 

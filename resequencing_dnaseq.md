@@ -59,17 +59,123 @@
                                       ← 송부 완료된 최종 후보 유전자 리스트
 ```
 
-| 스텝 | 소프트웨어(버전) | 핵심 파라미터 | Input | Output |
-|---|---|---|---|---|
-| 0. Raw data 검증 (비블로킹) | md5sum(coreutils), python3, zcat/wc | `xargs -n 2 -P 50` 병렬 50, `ThreadPoolExecutor(max_workers=10)`, batch_size 50 | 100 샘플 R1/R2 fastq.gz, md5/summary 텍스트 | stdout 리포트만 (파일 산출물 없음) |
-| 1. Trimming/QC | fastp **v1.0.1**, multiqc | `--detect_adapter_for_pe --cut_front --cut_tail --cut_window_size 4 --cut_mean_quality 20 --dedup --compression 4 --thread 100`(실제 64 threads로 제한됨) | `rawdata/*_R1/R2_*.fastq.gz` | `clean_data/*_clean_R1/R2.fastq.gz`(200개), `qc_reports/*`, `multiqc_result/` |
-| 2. Alignment + 전처리 (Cr1GR1/Cr22.5 병렬) | bwa-mem2 **2.2.1**, samtools **1.21**, GATK **4.6.2.0** | `BWA_THREADS=60(Cr1GR1)/80(Cr22.5) SORT_THREADS=20`; RG 태그; MarkDuplicates `--VALIDATION_STRINGENCY SILENT`; HaplotypeCaller `-ERC GVCF --native-pair-hmm-threads 2` | `clean_data/*_clean_R1/R2.fastq.gz`, 계통별 ragtag reference | `{Cr1GR1,Cr22.5}/bam/*.dedup.bam(.bai)`, `*.dedup_metrics.txt`, `{Cr1GR1,Cr22.5}/gvcf/*.g.vcf.gz(.tbi)` |
-| 3. Alignment 통계 (곁가지, 비블로킹) | samtools flagstat (1.21) | `THREADS=8`, `samtools flagstat -@ 2` | `{Cr1GR1,Cr22.5}/bam/*.dedup.bam` | `{Cr1GR1,Cr22.5}/flagstat/*.flagstat`, `*_alignment_stats.tsv` |
-| 4. gVCF 병합 + Genotyping | GATK **4.6.2.0** (CombineGVCFs, GenotypeGVCFs) | 기본 옵션 | `gvcf/*.g.vcf.gz` | `merged.gvcf.gz(.tbi)`, `raw_variants.vcf.gz(.tbi)` |
-| 5. SNP 추출 + Hard filtering | GATK **4.6.2.0** (SelectVariants, VariantFiltration) | `-select-type SNP`; `--filter-expression "QD<2.0\|\|FS>60.0\|\|MQ<40.0\|\|SOR>3.0\|\|MQRankSum<-12.5\|\|ReadPosRankSum<-8.0" --filter-name Basic_Filter` (Cr1GR1은 Cr22.5 코드를 동일 파라미터로 재사용) | `raw_variants.vcf.gz` | `raw_snps*.vcf.gz(.tbi)` → `filtered_snps*.vcf.gz(.tbi)` |
-| 6. VCF 추가 필터링 | vcftools **0.1.16** | `--remove-filtered-all --min-alleles 2 --max-alleles 2 --max-missing 0.7 --maf 0.05 --recode --recode-INFO-all` (Cr1GR1은 Cr22.5 코드 재사용) | `filtered_snps*.vcf.gz` | `clean_snps*.recode.vcf` |
-| 7. VCF → R/qtl2 포맷 변환 | python **3.13.9**, `scikit-allel` **1.3.13** (qtl_analysis conda env) | Chi-square 임계값(분리비 왜곡) 20.0, 결측률 임계값 50%, 인코딩 1=A(Alt)/2=H/3=B(Ref) | `clean_snps*.recode.vcf`, phenotype csv(외부 제공 원시 표현형) | `qtl2*_geno/gmap/pheno.csv`, `qtl2*_control.yaml` |
-| 8. QTL 재분석 파이프라인 (최종 채택) | R **4.5.2**, R 패키지 `qtl2` **v0.38** (qtl_analysis conda env); Cr22.5 step10 한정 ggplot2 | step01: missing rate 20% 개체 제거, 200kb bin thinning; step02: Kosambi cM; step04: HK 회귀(scan1); step05: permutation **n=1000**; step07: Bayes 95% CI; step08: Beavis 보정 PVE; step09: 피크 200kb 이내=HIGH/500kb 이내=MEDIUM; (Cr22.5 step10: BLAST bitscore 기준 best-hit, `dist_to_peak_kb` tier) | `qtl2*_control.yaml`(geno/gmap/pheno), GFF3 주석(공유), (Cr22.5 step10: 프로젝트 외부 `Functional_annotation/` 리소스) | Cr1GR1: `results/09_candidate_genes(_HIGH).csv`(최종); Cr22.5: `results/09_candidate_genes(_HIGH).csv` → step10 `results/10_candidate_annotation.csv`(최종), `10_top100kb_annotated.csv`, `10_gene_map.pdf` |
+### Step 0. Raw data 검증 (비블로킹)
+- **소프트웨어(버전):** md5sum(coreutils), python3, zcat/wc
+- **핵심 파라미터:** `xargs -n 2 -P 50` 병렬 50, `ThreadPoolExecutor(max_workers=10)`, batch_size 50
+- **Input:** 100 샘플 R1/R2 fastq.gz, md5/summary 텍스트
+- **Output:** stdout 리포트만 (파일 산출물 없음)
+- **실행 커맨드:**
+  ```bash
+  # verify_md5.sh
+  awk '{print $1, $2}' "$md5_file" | xargs -n 2 -P 50 bash -c 'check_md5 "$@"' _
+  # check_reads.py (내부: zcat <sample>.fastq.gz | wc -l, ThreadPoolExecutor(max_workers=10), batch_size=50)
+  python3 check_reads.py
+  # parse_summary.py
+  python3 parse_summary.py <summary.tsv>
+  ```
+
+### Step 1. Trimming/QC
+- **소프트웨어(버전):** fastp **v1.0.1**, multiqc
+- **핵심 파라미터:** `--detect_adapter_for_pe --cut_front --cut_tail --cut_window_size 4 --cut_mean_quality 20 --dedup --compression 4 --thread 100`(실제 64 threads로 제한됨)
+- **Input:** `rawdata/*_R1/R2_*.fastq.gz`
+- **Output:** `clean_data/*_clean_R1/R2.fastq.gz`(200개), `qc_reports/*`, `multiqc_result/`
+- **실행 커맨드** (`fastq.sh`, for 루프 대표 1건):
+  ```bash
+  fastp --in1 <sample>_R1_*.fastq.gz --in2 <sample>_R2_*.fastq.gz --out1 clean_data/<sample>_clean_R1.fastq.gz --out2 clean_data/<sample>_clean_R2.fastq.gz --detect_adapter_for_pe --cut_front --cut_tail --cut_window_size 4 --cut_mean_quality 20 --dedup --compression 4 --thread 100 --html qc_reports/<sample>_fastp.html --json qc_reports/<sample>_fastp.json
+  multiqc qc_reports/ -o multiqc_result
+  ```
+
+### Step 2. Alignment + 전처리 (Cr1GR1/Cr22.5 병렬)
+- **소프트웨어(버전):** bwa-mem2 **2.2.1**, samtools **1.21**, GATK **4.6.2.0**
+- **핵심 파라미터:** `BWA_THREADS=60(Cr1GR1)/80(Cr22.5) SORT_THREADS=20`; RG 태그; MarkDuplicates `--VALIDATION_STRINGENCY SILENT`; HaplotypeCaller `-ERC GVCF --native-pair-hmm-threads 2`
+- **Input:** `clean_data/*_clean_R1/R2.fastq.gz`, 계통별 ragtag reference
+- **Output:** `{Cr1GR1,Cr22.5}/bam/*.dedup.bam(.bai)`, `*.dedup_metrics.txt`, `{Cr1GR1,Cr22.5}/gvcf/*.g.vcf.gz(.tbi)`
+- **실행 커맨드:**
+  - Cr1GR1 (`bwamem2-GATK-Cr1GR1.sh`, for 루프 대표 1건):
+    ```bash
+    bwa-mem2 mem -t 60 -R "@RG\tID:<sample>\tSM:<sample>\tPL:ILLUMINA\tLB:<sample>" reference/Cr1GR1.ragtag.fasta clean_data/<sample>_clean_R1.fastq.gz clean_data/<sample>_clean_R2.fastq.gz | samtools sort -@ 20 -o Cr1GR1/bam/<sample>.sorted.bam -
+    gatk MarkDuplicates -I Cr1GR1/bam/<sample>.sorted.bam -O Cr1GR1/bam/<sample>.dedup.bam -M Cr1GR1/bam/<sample>.dedup_metrics.txt --CREATE_INDEX true --VALIDATION_STRINGENCY SILENT
+    gatk HaplotypeCaller -R reference/Cr1GR1.ragtag.fasta -I Cr1GR1/bam/<sample>.dedup.bam -O Cr1GR1/gvcf/<sample>.g.vcf.gz -ERC GVCF --native-pair-hmm-threads 2
+    ```
+  - Cr22.5 (`bwamem2-GATK.sh` — 매핑 커맨드 라인은 확인 필요, 스크립트 파일 없음: 실행 후 파일이 수정되어 현재 파일에는 MarkDuplicates/HaplotypeCaller만 남아있음; 로그 실측 `Threads: 80 + 20`으로 BWA_THREADS=80 추정. 현재 파일에 남아있는 부분):
+    ```bash
+    gatk MarkDuplicates -I bam/<sample>.sorted.bam -O bam/<sample>.dedup.bam -M bam/<sample>.dedup_metrics.txt --CREATE_INDEX true --VALIDATION_STRINGENCY SILENT
+    gatk HaplotypeCaller -R reference/Cr22.5.ragtag.fasta -I bam/<sample>.dedup.bam -O gvcf/<sample>.g.vcf.gz -ERC GVCF --native-pair-hmm-threads 2
+    ```
+
+### Step 3. Alignment 통계 (곁가지, 비블로킹)
+- **소프트웨어(버전):** samtools flagstat (1.21)
+- **핵심 파라미터:** `THREADS=8`, `samtools flagstat -@ 2`
+- **Input:** `{Cr1GR1,Cr22.5}/bam/*.dedup.bam`
+- **Output:** `{Cr1GR1,Cr22.5}/flagstat/*.flagstat`, `*_alignment_stats.tsv`
+- **실행 커맨드** (`get_alignment_stats.sh`, GENOME in Cr22.5,Cr1GR1 루프 대표 1건, THREADS=8로 병렬 throttle):
+  ```bash
+  samtools flagstat -@ 2 <ALIGN_DIR>/<GENOME>/bam/<sample>.dedup.bam > <ALIGN_DIR>/<GENOME>/flagstat/<sample>.flagstat
+  ```
+
+### Step 4. gVCF 병합 + Genotyping
+- **소프트웨어(버전):** GATK **4.6.2.0** (CombineGVCFs, GenotypeGVCFs)
+- **핵심 파라미터:** 기본 옵션
+- **Input:** `gvcf/*.g.vcf.gz`
+- **Output:** `merged.gvcf.gz(.tbi)`, `raw_variants.vcf.gz(.tbi)`
+- **실행 커맨드** (`Merging_gvcf.sh`, REF만 상이):
+  ```bash
+  # Cr1GR1
+  gatk CombineGVCFs -R /pbi-acc1/hsPark/Capsella_rubella_rsDNAseq/alignment/reference/Cr1GR1.ragtag.fasta --variant gvcf.list -O merged.gvcf.gz
+  gatk GenotypeGVCFs -R /pbi-acc1/hsPark/Capsella_rubella_rsDNAseq/alignment/reference/Cr1GR1.ragtag.fasta -V merged.gvcf.gz -O raw_variants.vcf.gz
+  # Cr22.5
+  gatk CombineGVCFs -R ../reference/Cr22.5.ragtag.fasta --variant gvcf.list -O merged.gvcf.gz
+  gatk GenotypeGVCFs -R ../reference/Cr22.5.ragtag.fasta -V merged.gvcf.gz -O raw_variants.vcf.gz
+  ```
+
+### Step 5. SNP 추출 + Hard filtering
+- **소프트웨어(버전):** GATK **4.6.2.0** (SelectVariants, VariantFiltration)
+- **핵심 파라미터:** `-select-type SNP`; `--filter-expression "QD<2.0||FS>60.0||MQ<40.0||SOR>3.0||MQRankSum<-12.5||ReadPosRankSum<-8.0" --filter-name Basic_Filter` (Cr1GR1은 Cr22.5 코드를 동일 파라미터로 재사용)
+- **Input:** `raw_variants.vcf.gz`
+- **Output:** `raw_snps*.vcf.gz(.tbi)` → `filtered_snps*.vcf.gz(.tbi)`
+- **실행 커맨드** (`GATK_filtering.sh` 1~2단계, Cr22.5 파일에 주석 처리되어 남아있음 — 실행 당시 커맨드로 확정; Cr1GR1은 Cr22.5 스크립트와 동일 커맨드 재사용, 대화형 실행 — 별도 .sh 없음):
+  ```bash
+  gatk SelectVariants -R /pbi-acc1/hsPark/Capsella_rubella_rsDNAseq/alignment/reference/Cr22.5.ragtag.fasta -V raw_variants.vcf.gz -select-type SNP -O raw_snps.vcf.gz
+  gatk VariantFiltration -R /pbi-acc1/hsPark/Capsella_rubella_rsDNAseq/alignment/reference/Cr22.5.ragtag.fasta -V raw_snps.vcf.gz --filter-expression "QD < 2.0 || FS > 60.0 || MQ < 40.0 || SOR > 3.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0" --filter-name "Basic_Filter" -O filtered_snps.vcf.gz
+  ```
+
+### Step 6. VCF 추가 필터링
+- **소프트웨어(버전):** vcftools **0.1.16**
+- **핵심 파라미터:** `--remove-filtered-all --min-alleles 2 --max-alleles 2 --max-missing 0.7 --maf 0.05 --recode --recode-INFO-all` (Cr1GR1은 Cr22.5 코드 재사용)
+- **Input:** `filtered_snps*.vcf.gz`
+- **Output:** `clean_snps*.recode.vcf`
+- **실행 커맨드** (`GATK_filtering.sh` 3단계, Cr22.5 현재 실행 활성 코드; Cr1GR1은 동일 커맨드 재사용, 대화형 실행 — 별도 .sh 없음):
+  ```bash
+  vcftools --gzvcf filtered_snps.vcf.gz --remove-filtered-all --min-alleles 2 --max-alleles 2 --max-missing 0.7 --maf 0.05 --recode --recode-INFO-all --out clean_snps
+  ```
+
+### Step 7. VCF → R/qtl2 포맷 변환
+- **소프트웨어(버전):** python **3.13.9**, `scikit-allel` **1.3.13** (qtl_analysis conda env)
+- **핵심 파라미터:** Chi-square 임계값(분리비 왜곡) 20.0, 결측률 임계값 50%, 인코딩 1=A(Alt)/2=H/3=B(Ref)
+- **Input:** `clean_snps*.recode.vcf`, phenotype csv(외부 제공 원시 표현형)
+- **Output:** `qtl2*_geno/gmap/pheno.csv`, `qtl2*_control.yaml`
+- **실행 커맨드:**
+  ```bash
+  # Cr1GR1 (argparse 정의 그대로; 정확한 커맨드라인 로그는 없으나 출력 파일명 패턴으로 확정)
+  python3 vcf_to_qtl2_1GR1.py --vcf <clean_snps_1GR1.recode.vcf> --pheno <pheno.csv> --out_prefix qtl2_1GR1
+  # Cr22.5 — 정확한 --vcf 전문은 확인 필요 (실행 로그 없음, 입력파일명은 동일 디렉토리 vcf_to_rqtl.py 로그로 추정)
+  python3 vcf_to_qtl2.py --vcf <clean_snps.recode.vcf> --pheno F2_phenotypes.csv --out_prefix qtl2
+  ```
+
+### Step 8. QTL 재분석 파이프라인 (최종 채택)
+- **소프트웨어(버전):** R **4.5.2**, R 패키지 `qtl2` **v0.38** (qtl_analysis conda env); Cr22.5 step10 한정 ggplot2
+- **핵심 파라미터:** step01: missing rate 20% 개체 제거, 200kb bin thinning; step02: Kosambi cM; step04: HK 회귀(scan1); step05: permutation **n=1000**; step07: Bayes 95% CI; step08: Beavis 보정 PVE; step09: 피크 200kb 이내=HIGH/500kb 이내=MEDIUM; (Cr22.5 step10: BLAST bitscore 기준 best-hit, `dist_to_peak_kb` tier)
+- **Input:** `qtl2*_control.yaml`(geno/gmap/pheno), GFF3 주석(공유), (Cr22.5 step10: 프로젝트 외부 `Functional_annotation/` 리소스)
+- **Output:** Cr1GR1: `results/09_candidate_genes(_HIGH).csv`(최종); Cr22.5: `results/09_candidate_genes(_HIGH).csv` → step10 `results/10_candidate_annotation.csv`(최종), `10_top100kb_annotated.csv`, `10_gene_map.pdf`
+- **실행 커맨드:**
+  ```bash
+  # 공통(reanalysis/run_all.sh, Cr1GR1/Cr22.5 동일)
+  bash run_all.sh   # 또는 bash run_all.sh --from=N
+  # 내부적으로 Rscript step01_data_qc.R ~ Rscript step09_candidates.R를 순차 실행, 로그는 logs/stepNN.log
+  # Cr22.5 전용 추가 실행 (run_all.sh에 미포함, 별도 실행)
+  Rscript step10_candidate_annotation.R
+  Rscript replot_figures.R
+  ```
 
 ## 2. 프로젝트별 특이사항
 

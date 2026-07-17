@@ -29,14 +29,108 @@
                 [프로젝트 고유 확장 분석 / 최종 산출물]
 ```
 
-| 스텝 | 소프트웨어(버전) | 핵심 파라미터 | Input | Output |
-|---|---|---|---|---|
-| 1. Genome survey (k-mer profiling) | FastK, GenomeScope2 (Cannabis: 버전 확인 필요; Pichia: 사용 확인되었으나 세부 버전은 재현 우선순위 낮음으로 처리됨) | k=31(Cannabis, HiFi reads 대상) / k=21(Pichia, Illumina reads 대상) | 원시 long-read(Cannabis, PacBio HiFi) 또는 QC된 Illumina reads(Pichia) | k-mer histogram, genome size/heterozygosity 추정치(GenomeScope summary) |
-| 2. De novo assembly | Cannabis: hifiasm 0.25.0-r726 / Pichia: NextDenovo v2.5.2 + NextPolish v1.4.1 | Cannabis: `-t 100`(스레드) / Pichia: `input_type=corrected, read_type=ont, genome_size=<GenomeScope 추정치>`(NextDenovo), `task=best, sgs_options=-max_depth 100 -bwa`(NextPolish, Illumina 폴리싱만 사용) | Cannabis: organelle 제거 후 nuclear-only HiFi reads / Pichia: ONT reads를 Illumina로 하이브리드 교정(Ratatosk)한 corrected long reads + Illumina reads(폴리싱용) | Cannabis: haplotype-resolved contig(hap1/hap2 × Female/Male) / Pichia: 폴리싱된 단일(haploid) genome fasta |
-| 3. 참조 기반 scaffolding | RagTag v2.1.0(Cannabis) / RagTag(Pichia, 버전 확인 필요) — 내부적으로 둘 다 minimap2 사용(Cannabis asm5 프리셋, Pichia v2.24-r1122 asm5 프리셋) | `-t 200`(Cannabis) | 조립 결과(contig-level) + 참조 유전체(Cannabis: 판게놈 유래 AH3Ma/AH3Mb; Pichia: NCBI GS115 GCF_000027005.1) | scaffold fasta(.agp, .stats 포함), 이후 chromosome/pseudochromosome 수준으로 재정리 |
-| 4. Genome QC | BUSCO v5.8.2(양 프로젝트 공통), QUAST v5.2.0(양 프로젝트 공통) | BUSCO: `-m genome`, lineage(Cannabis: rosales_odb12/rosids_odb10, Pichia: ascomycota_odb12/saccharomycetes_odb12); QUAST: 참조 유전체 지정, 기본 옵션 | scaffold(chr 단위) fasta | BUSCO short_summary(.txt/.json), QUAST report(.html/.tsv/.pdf) |
-| 5. 비교유전체 분석(synteny/dot-plot) | Cannabis: chromeister + minimap2/syri/plotsr(버전 확인 필요) / Pichia: mummer 4.0.1(nucmer+mummerplot) | Cannabis: minimap2 `-ax asm5 --eqx`, syri `-F B` / Pichia: nucmer `--maxmatch -l 20 -g 500 -c 100` | scaffold(chr 단위) fasta 및 비교 대상 유전체(Cannabis: 판게놈 98샘플; Pichia: 공개 Pichia 균주 게놈) | dot-plot 이미지(.png), 구조변이 vcf/summary(Cannabis) |
-| 6. 유전자/반복서열 주석 | Cannabis: RepeatModeler 2.0.6 + RepeatMasker 4.1.9 → BRAKER3 3.0.8(de novo 유전자 예측, RNA-seq+protein evidence 사용) / Pichia: LiftOff(참조 기반 주석 liftover, GS115 및 CBS7435 기준) | Cannabis: RepeatModeler `-LTRStruct`, BRAKER3 `--threads 125`; Pichia: LiftOff `-p 150`(CBS7435 대상은 `-exclude_partial -copies` 추가) | Cannabis: scaffolding 이전 contig-level masked genome + mRNA-seq + 판게놈 단백질 세트 / Pichia: scaffold(chr 단위, rename 前) fasta + 참조 gff | Cannabis: braker.gtf/aa/codingseq(신규 유전자 모델) / Pichia: liftover gff + unmapped_features 목록(참조 유전자 좌표 이전) |
+### Step 1. Genome survey (k-mer profiling)
+- **소프트웨어(버전):** FastK, GenomeScope2 (Cannabis: 버전 확인 필요; Pichia: 사용 확인되었으나 세부 버전은 재현 우선순위 낮음으로 처리됨)
+- **핵심 파라미터:** k=31(Cannabis, HiFi reads 대상) / k=21(Pichia, Illumina reads 대상)
+- **Input:** 원시 long-read(Cannabis, PacBio HiFi) 또는 QC된 Illumina reads(Pichia)
+- **Output:** k-mer histogram, genome size/heterozygosity 추정치(GenomeScope summary)
+- **실행 커맨드:**
+  - Cannabis (`<sample>`=Female/Male):
+    ```bash
+    FastK -k31 -M256 -T125 -t -P/pbi-acc1/hsPark/Cannabis_sativa_cv.ChungSam_dnDNAseq/Genome_survey Chungsamsoo-Tree-<sample>.1Cell.hifi.fastq.gz
+    Histex -G Chungsamsoo-Tree-<sample>.1Cell.hifi.hist > Csativa_CS_<sample>_31mer_genomescope.hist
+    GeneScopeFK.R -i Csativa_CS_<sample>_31mer_genomescope.hist -o Csativa_CS_<sample>_31mer_genomescope -k 31
+    ```
+  - Pichia (`<sample>`=BG-10/X-33):
+    ```bash
+    FastK -k21 -M128 -T200 -v -t -P/pbi-acc1/hsPark/Pichia_Pastoris_dnDNAseq_HanHwa/FastK/ <sample>_good_<R>.fastq
+    Fastmerge -ht -T200 -P/pbi-acc1/hsPark/Pichia_Pastoris_dnDNAseq_HanHwa/FastK/ <sample>_merged_k21 <sample>_good_1.ktab <sample>_good_2.ktab
+    Histex -G <sample>_merged_k21 > <sample>_merged_k21_genomescope.hist
+    GeneScopeFK.R -i <sample>_merged_k21_genomescope.hist -o P.pastoris_<sample>_illumina_merged_k21_genomescope -k 21
+    ```
+
+### Step 2. De novo assembly
+- **소프트웨어(버전):** Cannabis: hifiasm 0.25.0-r726 / Pichia: NextDenovo v2.5.2 + NextPolish v1.4.1
+- **핵심 파라미터:** Cannabis: `-t 100`(스레드) / Pichia: `input_type=corrected, read_type=ont, genome_size=<GenomeScope 추정치>`(NextDenovo), `task=best, sgs_options=-max_depth 100 -bwa`(NextPolish, Illumina 폴리싱만 사용)
+- **Input:** Cannabis: organelle 제거 후 nuclear-only HiFi reads / Pichia: ONT reads를 Illumina로 하이브리드 교정(Ratatosk)한 corrected long reads + Illumina reads(폴리싱용)
+- **Output:** Cannabis: haplotype-resolved contig(hap1/hap2 × Female/Male) / Pichia: 폴리싱된 단일(haploid) genome fasta
+- **실행 커맨드:**
+  - Cannabis (`<sample>`=Female/Male; hifiasm.log의 `CMD:` 라인에서 확인):
+    ```bash
+    hifiasm -o Csativa_nuclear_<sample>.asm -t 100 <sample>_nuclear_reads.fastq.gz
+    ```
+  - Pichia:
+    ```bash
+    nextDenovo nextdenovo_run.cfg   # cfg: input_type = corrected, read_type = ont, genome_size = 10923843
+    nextPolish nextpolish_run.cfg   # cfg: task = best, sgs_options = -max_depth 100 -bwa
+    ```
+
+### Step 3. 참조 기반 scaffolding
+- **소프트웨어(버전):** RagTag v2.1.0(Cannabis) / RagTag(Pichia, 버전 확인 필요) — 내부적으로 둘 다 minimap2 사용(Cannabis asm5 프리셋, Pichia v2.24-r1122 asm5 프리셋)
+- **핵심 파라미터:** `-t 200`(Cannabis)
+- **Input:** 조립 결과(contig-level) + 참조 유전체(Cannabis: 판게놈 유래 AH3Ma/AH3Mb; Pichia: NCBI GS115 GCF_000027005.1)
+- **Output:** scaffold fasta(.agp, .stats 포함), 이후 chromosome/pseudochromosome 수준으로 재정리
+- **실행 커맨드:**
+  - Cannabis (동일 패턴으로 4개 haplotype 조합 반복, ragtag.sh 참조):
+    ```bash
+    ragtag.py scaffold AH3Mb.softmasked.fasta ../Hifiasm/Male/Csativa_CS_Male.asm.bp.hap1.p_ctg.fa -o CS_Male_AH3Mb_Y -t 200
+    ragtag.py scaffold AH3Ma.softmasked.fasta ../Hifiasm/Female/Csativa_CS_Female.asm.bp.hap1.p_ctg.fa -o CS_Female_AH3Ma_hap1 -t 200
+    ```
+  - Pichia: 확인 필요 — 스크립트 파일 없음
+
+### Step 4. Genome QC
+- **소프트웨어(버전):** BUSCO v5.8.2(양 프로젝트 공통), QUAST v5.2.0(양 프로젝트 공통)
+- **핵심 파라미터:** BUSCO: `-m genome`, lineage(Cannabis: rosales_odb12/rosids_odb10, Pichia: ascomycota_odb12/saccharomycetes_odb12); QUAST: 참조 유전체 지정, 기본 옵션
+- **Input:** scaffold(chr 단위) fasta
+- **Output:** BUSCO short_summary(.txt/.json), QUAST report(.html/.tsv/.pdf)
+- **실행 커맨드:**
+  - Cannabis (`<sample>_<ref>` 조합마다 동일 패턴 반복, quast.log에서 확인):
+    ```bash
+    busco -m genome -i <sample>.fasta -o <sample>.rosales_odb12 -c 150 --datasets_version odb10 -f -l rosales_odb12
+    quast.py -o <sample>_<ref> -r <ref>.softmasked.fasta -t 150 <sample>_<ref>_RagTag.chr.fasta
+    ```
+  - Pichia (`<lineage>`=ascomycota_odb12/saccharomycetes_odb12, quast.log에서 확인):
+    ```bash
+    busco -i <sample>_NextDP_NextPsh.fasta -l /pbi-acc1/hsPark/Pichia_Pastoris_dnDNAseq_HanHwa/BUSCO/X-33/busco_downloads/lineages/<lineage> -o <sample>_NextDP_NextPsh_<lineage>_busco --cpu 200 --mode genome
+    quast.py --threads 100 --output-dir nextDenovo <sample>_nextND_nextPsh.fasta
+    ```
+
+### Step 5. 비교유전체 분석(synteny/dot-plot)
+- **소프트웨어(버전):** Cannabis: chromeister + minimap2/syri/plotsr(버전 확인 필요) / Pichia: mummer 4.0.1(nucmer+mummerplot)
+- **핵심 파라미터:** Cannabis: minimap2 `-ax asm5 --eqx`, syri `-F B` / Pichia: nucmer `--maxmatch -l 20 -g 500 -c 100`
+- **Input:** scaffold(chr 단위) fasta 및 비교 대상 유전체(Cannabis: 판게놈 98샘플; Pichia: 공개 Pichia 균주 게놈)
+- **Output:** dot-plot 이미지(.png), 구조변이 vcf/summary(Cannabis)
+- **실행 커맨드:**
+  - Cannabis (sourmash.sh, plotsr.sh — 다른 genome 쌍은 스크립트 내 대부분 주석 처리되어 미실행 정황; chromeister는 확인 필요 — 스크립트 파일 없음):
+    ```bash
+    sourmash sketch dna -p scaled=1000,k=31 <genome>.fasta.gz --output <genome>.sig
+    minimap2 -ax asm5 -t 256 --eqx CS_Male_AH3Ma_hap2_RagTag.chr.fasta CS_Male_AH3Mb_Y_RagTag.chr.modified.sorted.fasta | samtools sort -O BAM - > D_E.bam
+    syri -c D_E.bam -r CS_Male_AH3Ma_hap2_RagTag.chr.fasta -q CS_Male_AH3Mb_Y_RagTag.chr.modified.sorted.fasta -F B --prefix D_E
+    ```
+  - Pichia (nucmer_plot.sh, `<ref>`은 대상 공개 균주별 .fna 파일마다 반복):
+    ```bash
+    nucmer --maxmatch -l 20 -g 500 -c 100 -p <ref>_vs_query -t 16 <ref>.fna X-33_flye_GS115_scaffolded.fasta
+    mummerplot -t png -p <ref>_vs_query --layout -R <ref>.fna -Q X-33_flye_GS115_scaffolded.fasta -s large --color <ref>_vs_query.delta
+    ```
+
+### Step 6. 유전자/반복서열 주석
+- **소프트웨어(버전):** Cannabis: RepeatModeler 2.0.6 + RepeatMasker 4.1.9 → BRAKER3 3.0.8(de novo 유전자 예측, RNA-seq+protein evidence 사용) / Pichia: LiftOff(참조 기반 주석 liftover, GS115 및 CBS7435 기준)
+- **핵심 파라미터:** Cannabis: RepeatModeler `-LTRStruct`, BRAKER3 `--threads 125`; Pichia: LiftOff `-p 150`(CBS7435 대상은 `-exclude_partial -copies` 추가)
+- **Input:** Cannabis: scaffolding 이전 contig-level masked genome + mRNA-seq + 판게놈 단백질 세트 / Pichia: scaffold(chr 단위, rename 前) fasta + 참조 gff
+- **Output:** Cannabis: braker.gtf/aa/codingseq(신규 유전자 모델) / Pichia: liftover gff + unmapped_features 목록(참조 유전자 좌표 이전)
+- **실행 커맨드:**
+  - Cannabis (module_RepeatModeler_Masker.sh, `<sample>_<hap>`=Female/Male × hap1/hap2 4종 동일 패턴; braker.log의 `BRAKER CALL:` 라인에서 확인):
+    ```bash
+    BuildDatabase -name CS_<sample>_<hap>.db Csativa_nuclear_<sample>.asm.bp.<hap>.p_ctg.fa
+    RepeatModeler -database CS_<sample>_<hap>.db -LTRStruct Csativa_nuclear_<sample>.asm.bp.<hap>.p_ctg.fa -threads 200
+    RepeatMasker -xsmall -gff -pa 200 -lib RM_*/consensi.fa.classified Csativa_nuclear_<sample>.asm.bp.<hap>.p_ctg.fa
+    braker.pl --species=Cannabis_sativa --genome=Csativa_nuclear_<sample>.asm.bp.<hap>.p_ctg.fa.masked --rnaseq_sets_ids Csativa_female,Csativa_male --rnaseq_sets_dirs=. --threads 125 --prot_seq=Cannabis_98pangenome.v2.proteins.fasta
+    ```
+  - Pichia (Liftoff.sh; CBS7435 기준은 GS115 기준 실행 약 6주 후 별도 수행):
+    ```bash
+    liftoff -g GCF_000027005.1_ASM2700v1_genomic.gff -o <sample>_NextDP_NextPsh_scaffolded.gff -f feature_types.txt -dir itermediate_<sample>_NextDP_NextPsh_scaffolded_files -u <sample>_NextDP_NextPsh_scaffolded_unmapped_features.txt -p 150 <sample>_NextDP_NextPsh_scaffolded.fasta GCF_000027005.1_ASM2700v1_genomic.fna
+    liftoff -g GCA_900235035.2_KP_7435-4_genomic.gff -o <sample>_NextDP_NextPsh_scaffolded_CBS7435.gff -f feature_types.txt -dir itermediate_<sample>_NextDP_NextPsh_scaffolded_files -u <sample>_NextDP_NextPsh_scaffolded_CBS7435_unmapped_features.txt -p 150 -exclude_partial -copies <sample>_NextDP_NextPsh_scaffolded.fasta GCA_900235035.2_KP_7435-4_genomic.fna
+    ```
 
 ## 2. 프로젝트별 특이사항
 
