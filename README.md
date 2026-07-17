@@ -1,6 +1,6 @@
 # 생물정보학 분석 파이프라인 종합 정리
 
-13개 프로젝트(acc1 9개 + acc2 4개)의 실측 기반 파이프라인 문서(`handover_docs`)를 분석
+14개 프로젝트(acc1 10개 + acc2 4개)의 실측 기반 파이프라인 문서(`handover_docs`)를 분석
 목표/방법 기준 5개 카테고리로 분류하고, 카테고리 내 공통 파이프라인과 프로젝트별 특이사항을
 비교 정리한 문서 세트입니다. 저장 위치(acc1/acc2)가 아니라 분석 방법 기준으로 분류했습니다.
 
@@ -12,7 +12,7 @@
 | Resequencing 변이탐지 DNA-seq | 2 | 참조 기반 리시퀀싱(bwa-mem2/bwa+GATK)을 통한 QTL 후보 유전자 탐색 또는 분자마커 개발 | [resequencing_dnaseq.md](resequencing_dnaseq.md) |
 | Bulk mRNA-seq 차등발현 | 4 | HISAT2+StringTie 정량 → TMM 정규화 → Trinity/edgeR 차등발현분석 표준 파이프라인 | [bulk_mRNAseq_DE.md](bulk_mRNAseq_DE.md) |
 | Multi-omics/holobiome | 1 | 뿌리 전사체(mRNA-seq) + 근권 메타지놈(16S) 통합 분석(MOFA+) | [multi_omics_holobiome.md](multi_omics_holobiome.md) |
-| Single-cell RNA-seq | 1 | 10X Genomics cellranger multi + Seurat 기반 단일세포 전사체 분석 | [single_cell_rnaseq.md](single_cell_rnaseq.md) |
+| Single-cell RNA-seq | 2 | 10X Genomics cellranger 기반 단일세포 전사체 분석(Seurat/R 또는 Scanpy/Python) | [single_cell_rnaseq.md](single_cell_rnaseq.md) |
 
 ## 전체 프로젝트 한눈에 보기
 
@@ -30,16 +30,22 @@
 | Zoysia_sinica_japonica_mrRNAseq | acc1 | Bulk mRNA-seq 차등발현 | 갯벌잔디(Z. sinica)-육지잔디(Z. japonica) NaCl 처리 뿌리 전사체 종간 비교 | Prinseq-lite, HISAT2, StringTie, Trinity v2.15.2/edgeR, reciprocal BLASTP, InterProScan, EnTAP | 참조 게놈 3버전(Zj/Zj_contig/Zs) 병렬 처리(Track A) + 4개 독립 확장 트랙(TF_Prediction/종간비교/Salt_transporters/ENTAP 주석) 보유 — 카테고리 내 가장 복합적인 DAG |
 | Panax_ginseng_holobiome | acc1 | Multi-omics/holobiome | 인삼 2·3·4년생 뿌리 전사체-근권 미생물(16S) 상호관계 규명을 통한 연작장해·진세노사이드 합성 조절 메커니즘 연구 | QIIME2, phyloseq/ANCOM-BC2, HISAT2, StringTie2, edgeR, WGCNA, eggNOG-mapper, clusterProfiler, SpiecEasi/SparCC, MOFA+ | 16S+mRNA-seq 두 축을 MOFA+로 통합(유일한 멀티오믹스 프로젝트); mRNA-seq 정량 경로에서 featureCounts/DESeq2/구버전WGCNA 실패 이력 존재; "양자 영감 ML" 계획은 미착수 상태로 확인 |
 | Homo_sapiens_BEST1_scRNAseq | acc2 | Single-cell RNA-seq | Human brain organoid 세포주(#2, #7)의 BEST1 knockdown 단일세포 전사체 프로파일링 | Cell Ranger 10.0(OCM 4-plex), Seurat 5, DoubletFinder, Harmony, clusterProfiler류(fgsea/msigdbr) | 10X OCM 4-plex 라이브러리 1회 cellranger multi 실행으로 4샘플 디멀티플렉싱; Harmony 기반 donor 통합 경로와 Harmony 미사용 donor 분리 경로가 병행 수행되는 유일한 프로젝트 |
+| Homo_sapiens_Tcell_scRNAseq | acc1 (`2nd_generation/` 하위) | Single-cell RNA-seq | 인간 제대혈 T세포 anti-CD3/CD28 activation 단일세포 전사체 프로파일링(Control vs Treatment) | Cell Ranger 10.0, Scanpy 1.12.1, AnnData, Scrublet | 동일 라이브러리 3회 재시퀀싱 배치를 심볼릭 링크 lane 위장 트릭으로 병합; Seurat 대신 Scanpy/Python 생태계 사용(카테고리 내 유일); NgR1(RTN4R)/NogoA(RTN4) 발현 기반 T세포 서브셋 DEG 분석; DoubletFinder 교차검증은 사이드 브랜치로만 존재하고 최종 파이프라인엔 미반영 |
 
 ## 범위 및 원칙
 
 - 대상은 `handover_docs`(01_directory_map.md + 02_pipeline_steps.md, 스크립트·로그 실측
-  교차검증 기반)가 이미 작성된 13개 프로젝트(acc1 9개 + acc2 4개)로 한정합니다.
+  교차검증 기반)가 이미 작성된 14개 프로젝트(acc1 10개 + acc2 4개)로 한정합니다.
   handover_docs가 없는 프로젝트(acc1: Arabidopsis_scRNAseq_Chungbuk_Prof.Jo,
   Camelina_sativa_genome, Capsella_rubella_dnDNAseq, Capsicum_annum_snRNAseq,
-  Homo_sapiens_Tcell_scRNAseq, Larix_kaempferi_mRNAseq, Panax_ginseng_snRNAseq / acc2:
-  GBM_mRNAseq, korean_pine_genome_assembly, Lemna_Kinnex_Isoseq, scRNA-seq_data,
-  Zoysia_Phenomics)는 이번 범위에서 제외되었습니다.
+  Larix_kaempferi_mRNAseq, Panax_ginseng_snRNAseq / acc2: GBM_mRNAseq,
+  korean_pine_genome_assembly, Lemna_Kinnex_Isoseq, scRNA-seq_data, Zoysia_Phenomics)는
+  이번 범위에서 제외되었습니다.
+- Homo_sapiens_Tcell_scRNAseq는 프로젝트 최상위가 아니라 `2nd_generation/` 하위 폴더에
+  handover_docs가 있어 최초 스캔에서 누락되었다가 이후 추가되었습니다. 프로젝트 최상위의
+  1차 분석 산출물(`rawdata`, `cellranger_output`, `reference`,
+  `run_cellranger_analysis.sh` 등)은 해당 handover_docs 자체가 스코프 외로 명시한 부분이라
+  이번 종합정리에도 포함하지 않았습니다 — 향후 필요 시 별도 확인 필요.
 - 원본 문서에서 "확인 필요"로 표시된 불확실 항목은 새로 추정하지 않고 각 카테고리
   문서에 그대로 보존했습니다.
 - 각 카테고리 문서의 파이프라인 스텝은 표가 아닌 스텝별 서술형(소프트웨어/파라미터/
