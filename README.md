@@ -1,8 +1,11 @@
 # 생물정보학 분석 파이프라인 종합 정리
 
 15개 프로젝트(acc1 10개 + acc2 4개 + NAS_Archive 1개)의 실측 기반 파이프라인 문서를 분석
-목표/방법 기준 5개 카테고리로 분류하고, 카테고리 내 공통 파이프라인과 프로젝트별 특이사항을
-비교 정리한 문서 세트입니다. 저장 위치가 아니라 분석 방법 기준으로 분류했습니다.
+목표/방법 기준으로 분류하고, 카테고리 내 공통 파이프라인과 프로젝트별 특이사항을 비교
+정리한 문서 세트입니다. 저장 위치가 아니라 분석 방법 기준으로 분류했으며, 한 프로젝트
+안에서도 분석 목표/방법이 다른 후속 분석은 별도 카테고리 문서로 분리했습니다(아래
+Zoysia_sinica_Genome_Assembly의 비교유전체/진화유전체/주석·검증 3개 문서가 그 예). 이에 따라
+프로젝트 수(15)와 카테고리 문서 수(8)가 서로 다릅니다.
 
 ## 분류 체계
 
@@ -13,6 +16,9 @@
 | Bulk mRNA-seq 차등발현 | 4 | HISAT2+StringTie 정량 → TMM 정규화 → Trinity/edgeR 차등발현분석 표준 파이프라인 | [bulk_mRNAseq_DE.md](bulk_mRNAseq_DE.md) |
 | Multi-omics/holobiome | 1 | 뿌리 전사체(mRNA-seq) + 근권 메타지놈(16S) 통합 분석(MOFA+) | [multi_omics_holobiome.md](multi_omics_holobiome.md) |
 | Single-cell RNA-seq | 2 | 10X Genomics cellranger 기반 단일세포 전사체 분석(Seurat/R 또는 Scanpy/Python) | [single_cell_rnaseq.md](single_cell_rnaseq.md) |
+| 비교유전체 분석 | 1 | Zoysia_sinica의 OrthoFinder/Ks-MCScanX/Circos 기반 근연종 비교 (Zoysia_sinica_Genome_Assembly의 후속 분석) | [comparative_genomics.md](comparative_genomics.md) |
+| 진화유전체 분석 | 1 | Zoysia_sinica의 CAFE/MCMCTree/PAML 기반 유전자가족진화·분화시기·양성선택 분석 (Zoysia_sinica_Genome_Assembly의 후속 분석) | [evolutionary_genomics.md](evolutionary_genomics.md) |
+| 유전체 주석 및 실험 검증 | 1 | Zoysia_sinica의 EnTAP 기능주석, 구조유전체(텔로미어/센트로미어), qRT-PCR 검증 (Zoysia_sinica_Genome_Assembly의 후속 분석) | [genome_annotation_and_validation.md](genome_annotation_and_validation.md) |
 
 ## 전체 프로젝트 한눈에 보기
 
@@ -22,7 +28,7 @@
 | Pichia_Pastoris_dnDNAseq_HanHwa | acc1 | De novo genome assembly | 한화솔루션 Pichia 균주(BG-10, X-33) 2종의 ONT+Illumina 하이브리드 de novo genome assembly | NextDenovo, NextPolish, Ratatosk, RagTag, BUSCO, QUAST, Merqury, mummer, LiftOff | trycycler multi-assembler 합의조립 시도 후 reconcile 실패로 폐기, NextDenovo+NextPolish 단일 경로 채택; 유전자 주석은 de novo 예측이 아닌 LiftOff 기반 liftover(GS115/CBS7435 참조) |
 | Abies_koreana_dnDNAseq | acc2 | De novo genome assembly | 구상나무 표준목(제주도)의 전장 유전체 해독 | hifiasm, Oatk, minimap2, seqkit, QUAST | 2026-07 기준 진행 중 프로젝트 — assembly + 사후 organelle 필터링 + QUAST QC까지만 완료, scaffolding/비교유전체/유전자주석은 아직 미수행; BUSCO 미사용 |
 | Zoysia_macrostachya_dnDNAseq | acc2 | De novo genome assembly | Zoysia macrostachya de novo 조립 → Omni-C 스캐폴딩 → 갭클로징 → 주석 → 비교유전체(분화시기/유전자가족진화/양성선택) | Ratatosk, NextDenovo/NextPolish/ntLink, HapHiC, Juicebox, YagCloser, BRAKER3+TSEBRA, OrthoFinder, MCMCTree, CAFE5 | Hi-C 기반 de novo 스캐폴딩 사용(HapHiC); pan-genome 비교 + 염스트레스 SRA 전사체 재분석까지 포함한 복합적인 파이프라인 |
-| Zoysia_sinica_Genome_Assembly | NAS_Archive | De novo genome assembly | *Zoysia sinica*(갯벌잔디) de novo 전장유전체 조립 및 비교유전체(연구목적은 description.txt 부재로 폴더/파일명 기반 추정) | yahs/SALSA2/3D-DNA(Hi-C 스캐폴딩), RagTag, BUSCO, QUAST, Merqury, RepeatModeler/RepeatMasker, BRAKER3(v3.0.7), AGAT(v1.4.0), OrthoFinder, CAFE, MCMCTree | 원시 de novo assembly 단계가 접근 불가 디렉토리(`Original/`)에서 수행되어 검증 자체가 불가능(5개 프로젝트 중 불확실 항목이 가장 많음); Hi-C 스캐폴딩 툴 3종(yahs/SALSA2/3D-DNA) 병행 시도 후 yahs 채택; 별도 수동 큐레이션(Manual_curation) 단계 보유 |
+| Zoysia_sinica_Genome_Assembly | NAS_Archive | De novo genome assembly | *Zoysia sinica*(갯벌잔디) de novo 전장유전체 조립 및 주석(연구목적은 description.txt 부재로 폴더/파일명 기반 추정) | yahs/SALSA2/3D-DNA(Hi-C 스캐폴딩), RagTag, BUSCO, QUAST, Merqury, RepeatModeler/RepeatMasker, BRAKER3(v3.0.7), AGAT(v1.4.0) | 원시 de novo assembly 단계가 접근 불가 디렉토리(`Original/`)에서 수행되어 검증 자체가 불가능(5개 프로젝트 중 불확실 항목이 가장 많음); Hi-C 스캐폴딩 툴 3종(yahs/SALSA2/3D-DNA) 병행 시도 후 yahs 채택; 별도 수동 큐레이션(Manual_curation) 단계 보유. de novo 조립 이후 후속 분석(비교유전체·진화유전체·기능주석/검증)은 별도 문서 3개로 분리 — comparative_genomics.md, evolutionary_genomics.md, genome_annotation_and_validation.md 참조 |
 | Capsella_rubella_rsDNAseq | acc1 | Resequencing 변이탐지 DNA-seq | *Capsella rubella* 1GR1×22.5 F2 100개체의 flowering time/cauline leaf number 형질 QTL 연구 | fastp, bwa-mem2, GATK4, vcftools, R/qtl2 | 두 참조 계통(Cr1GR1/Cr22.5)으로 alignment 단계부터 완전 병렬 수행, 서로 다른 지점(step09/step10)에서 종료; 최종 후보 유전자 리스트는 Cr22.5 계통에서만 기능주석까지 진행되어 산출 |
 | Actinia_arguat_rsDNAseq | acc2 | Resequencing 변이탐지 DNA-seq | Actinidia arguta(다래) 12품종 구분용 분자마커(rhAmp/IDT genotyping) 개발 | prinseq-lite, bwa, GATK4, vcftools, bcftools, bedtools, PLINK | 단일 참조 게놈, MarkDuplicates 없이 RG 태깅만 수행; QTL이 아닌 SNP/InDel 조합 기반 최소 마커셋 탐색(greedy set-cover)으로 종결 |
 | Panax_ginseng_123w_development_mrRNA-seq | acc1 | Bulk mRNA-seq 차등발현 | 인삼 1년생 1·2·3주차 뿌리 이차 생장 발달 분자 메커니즘 연구 | Trimmomatic, PRINSEQ++, HISAT2, StringTie, edgeR/Trinity, clusterProfiler | 2단계 QC(Trimmomatic+PRINSEQ++, 타 프로젝트와 상이); Diamond 오솔로그 매핑+GO/KEGG+GSEA 후속 분석까지 논문 리비전 단계에서 재작업 완료 |
