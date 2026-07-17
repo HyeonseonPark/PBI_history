@@ -1,14 +1,14 @@
 # 생물정보학 분석 파이프라인 종합 정리
 
-14개 프로젝트(acc1 10개 + acc2 4개)의 실측 기반 파이프라인 문서(`handover_docs`)를 분석
+15개 프로젝트(acc1 10개 + acc2 4개 + NAS_Archive 1개)의 실측 기반 파이프라인 문서를 분석
 목표/방법 기준 5개 카테고리로 분류하고, 카테고리 내 공통 파이프라인과 프로젝트별 특이사항을
-비교 정리한 문서 세트입니다. 저장 위치(acc1/acc2)가 아니라 분석 방법 기준으로 분류했습니다.
+비교 정리한 문서 세트입니다. 저장 위치가 아니라 분석 방법 기준으로 분류했습니다.
 
 ## 분류 체계
 
 | 카테고리 | 프로젝트 수 | 설명 | 문서 |
 |---|---|---|---|
-| De novo genome assembly | 4 | 장리드(PacBio HiFi/ONT) 시퀀싱 기반 de novo 전장유전체 조립, scaffolding, QC, 유전자/반복서열 주석 | [de_novo_genome_assembly.md](de_novo_genome_assembly.md) |
+| De novo genome assembly | 5 | 장리드(PacBio HiFi/ONT) 시퀀싱 기반 de novo 전장유전체 조립, scaffolding, QC, 유전자/반복서열 주석 | [de_novo_genome_assembly.md](de_novo_genome_assembly.md) |
 | Resequencing 변이탐지 DNA-seq | 2 | 참조 기반 리시퀀싱(bwa-mem2/bwa+GATK)을 통한 QTL 후보 유전자 탐색 또는 분자마커 개발 | [resequencing_dnaseq.md](resequencing_dnaseq.md) |
 | Bulk mRNA-seq 차등발현 | 4 | HISAT2+StringTie 정량 → TMM 정규화 → Trinity/edgeR 차등발현분석 표준 파이프라인 | [bulk_mRNAseq_DE.md](bulk_mRNAseq_DE.md) |
 | Multi-omics/holobiome | 1 | 뿌리 전사체(mRNA-seq) + 근권 메타지놈(16S) 통합 분석(MOFA+) | [multi_omics_holobiome.md](multi_omics_holobiome.md) |
@@ -21,7 +21,8 @@
 | Cannabis_sativa_cv.ChungSam_dnDNAseq | acc1 | De novo genome assembly | 한국 재래종 대마(청삼) 자웅이주 개체의 haplotype-resolved de novo 전장유전체 조립 및 카나비노이드 합성 유전자 분석 | hifiasm, RagTag, BUSCO, QUAST, RepeatModeler/RepeatMasker, BRAKER3, Sourmash, chromeister/syri/plotsr | Oatk로 organelle 분리 후 hifiasm 2회 조립(1차 폐기 추정); Female/Male 각 hap1/hap2, 총 4 haplotype; 판게놈(98샘플) 비교 및 THCAS/CBDAS/CBGAS 유전자 분석 |
 | Pichia_Pastoris_dnDNAseq_HanHwa | acc1 | De novo genome assembly | 한화솔루션 Pichia 균주(BG-10, X-33) 2종의 ONT+Illumina 하이브리드 de novo genome assembly | NextDenovo, NextPolish, Ratatosk, RagTag, BUSCO, QUAST, Merqury, mummer, LiftOff | trycycler multi-assembler 합의조립 시도 후 reconcile 실패로 폐기, NextDenovo+NextPolish 단일 경로 채택; 유전자 주석은 de novo 예측이 아닌 LiftOff 기반 liftover(GS115/CBS7435 참조) |
 | Abies_koreana_dnDNAseq | acc2 | De novo genome assembly | 구상나무 표준목(제주도)의 전장 유전체 해독 | hifiasm, Oatk, minimap2, seqkit, QUAST | 2026-07 기준 진행 중 프로젝트 — assembly + 사후 organelle 필터링 + QUAST QC까지만 완료, scaffolding/비교유전체/유전자주석은 아직 미수행; BUSCO 미사용 |
-| Zoysia_macrostachya_dnDNAseq | acc2 | De novo genome assembly | Zoysia macrostachya de novo 조립 → Omni-C 스캐폴딩 → 갭클로징 → 주석 → 비교유전체(분화시기/유전자가족진화/양성선택) | Ratatosk, NextDenovo/NextPolish/ntLink, HapHiC, Juicebox, YagCloser, BRAKER3+TSEBRA, OrthoFinder, MCMCTree, CAFE5 | 4개 de novo 프로젝트 중 유일하게 Hi-C 기반 de novo 스캐폴딩 사용; pan-genome 비교 + 염스트레스 SRA 전사체 재분석까지 포함한 가장 복합적인 파이프라인 |
+| Zoysia_macrostachya_dnDNAseq | acc2 | De novo genome assembly | Zoysia macrostachya de novo 조립 → Omni-C 스캐폴딩 → 갭클로징 → 주석 → 비교유전체(분화시기/유전자가족진화/양성선택) | Ratatosk, NextDenovo/NextPolish/ntLink, HapHiC, Juicebox, YagCloser, BRAKER3+TSEBRA, OrthoFinder, MCMCTree, CAFE5 | Hi-C 기반 de novo 스캐폴딩 사용(HapHiC); pan-genome 비교 + 염스트레스 SRA 전사체 재분석까지 포함한 복합적인 파이프라인 |
+| Zoysia_sinica_Genome_Assembly | NAS_Archive | De novo genome assembly | *Zoysia sinica*(갯벌잔디) de novo 전장유전체 조립 및 비교유전체(연구목적은 description.txt 부재로 폴더/파일명 기반 추정) | yahs/SALSA2/3D-DNA(Hi-C 스캐폴딩), RagTag, BUSCO, QUAST, Merqury, RepeatModeler/RepeatMasker, BRAKER3(v3.0.7), AGAT(v1.4.0), OrthoFinder, CAFE, MCMCTree | 원시 de novo assembly 단계가 접근 불가 디렉토리(`Original/`)에서 수행되어 검증 자체가 불가능(5개 프로젝트 중 불확실 항목이 가장 많음); Hi-C 스캐폴딩 툴 3종(yahs/SALSA2/3D-DNA) 병행 시도 후 yahs 채택; 별도 수동 큐레이션(Manual_curation) 단계 보유 |
 | Capsella_rubella_rsDNAseq | acc1 | Resequencing 변이탐지 DNA-seq | *Capsella rubella* 1GR1×22.5 F2 100개체의 flowering time/cauline leaf number 형질 QTL 연구 | fastp, bwa-mem2, GATK4, vcftools, R/qtl2 | 두 참조 계통(Cr1GR1/Cr22.5)으로 alignment 단계부터 완전 병렬 수행, 서로 다른 지점(step09/step10)에서 종료; 최종 후보 유전자 리스트는 Cr22.5 계통에서만 기능주석까지 진행되어 산출 |
 | Actinia_arguat_rsDNAseq | acc2 | Resequencing 변이탐지 DNA-seq | Actinidia arguta(다래) 12품종 구분용 분자마커(rhAmp/IDT genotyping) 개발 | prinseq-lite, bwa, GATK4, vcftools, bcftools, bedtools, PLINK | 단일 참조 게놈, MarkDuplicates 없이 RG 태깅만 수행; QTL이 아닌 SNP/InDel 조합 기반 최소 마커셋 탐색(greedy set-cover)으로 종결 |
 | Panax_ginseng_123w_development_mrRNA-seq | acc1 | Bulk mRNA-seq 차등발현 | 인삼 1년생 1·2·3주차 뿌리 이차 생장 발달 분자 메커니즘 연구 | Trimmomatic, PRINSEQ++, HISAT2, StringTie, edgeR/Trinity, clusterProfiler | 2단계 QC(Trimmomatic+PRINSEQ++, 타 프로젝트와 상이); Diamond 오솔로그 매핑+GO/KEGG+GSEA 후속 분석까지 논문 리비전 단계에서 재작업 완료 |
@@ -34,9 +35,10 @@
 
 ## 범위 및 원칙
 
-- 대상은 `handover_docs`(01_directory_map.md + 02_pipeline_steps.md, 스크립트·로그 실측
-  교차검증 기반)가 이미 작성된 14개 프로젝트(acc1 10개 + acc2 4개)로 한정합니다.
-  handover_docs가 없는 프로젝트(acc1: Arabidopsis_scRNAseq_Chungbuk_Prof.Jo,
+- 대상은 acc1 10개 + acc2 4개(각자 폴더의 기존 `handover_docs`: 01_directory_map.md +
+  02_pipeline_steps.md, 스크립트·로그 실측 교차검증 기반) + NAS_Archive 1개(핸드오버 문서는
+  없었으나 이번 작업에서 직접 스크립트·로그를 실측 검증) 총 15개 프로젝트로 한정합니다.
+  acc1/acc2 중 handover_docs가 없는 프로젝트(acc1: Arabidopsis_scRNAseq_Chungbuk_Prof.Jo,
   Camelina_sativa_genome, Capsella_rubella_dnDNAseq, Capsicum_annum_snRNAseq,
   Larix_kaempferi_mRNAseq, Panax_ginseng_snRNAseq / acc2: GBM_mRNAseq,
   korean_pine_genome_assembly, Lemna_Kinnex_Isoseq, scRNA-seq_data, Zoysia_Phenomics)는
@@ -46,6 +48,12 @@
   1차 분석 산출물(`rawdata`, `cellranger_output`, `reference`,
   `run_cellranger_analysis.sh` 등)은 해당 handover_docs 자체가 스코프 외로 명시한 부분이라
   이번 종합정리에도 포함하지 않았습니다 — 향후 필요 시 별도 확인 필요.
+- Zoysia_sinica_Genome_Assembly(NAS_Archive)는 description.txt/README 자체가 없고 별도
+  handover_docs도 작성되지 않은 상태였습니다. 이번 작업에서 실제 스크립트/로그/파일
+  타임스탬프를 직접 읽어 검증한 뒤 바로 이 종합정리 문서에 반영했으며, 원본 위치에는
+  별도 handover_docs를 남기지 않았습니다. 원시 de novo assembly 단계가 이루어진
+  `Original/ONT_longread_DNAseq/` 디렉토리는 조사 시점에 접근 불가(간헐적 NFS 이슈)였어서
+  검증하지 못했습니다 — 재확인 필요.
 - 원본 문서에서 "확인 필요"로 표시된 불확실 항목은 새로 추정하지 않고 각 카테고리
   문서에 그대로 보존했습니다.
 - 각 카테고리 문서의 파이프라인 스텝은 표가 아닌 스텝별 서술형(소프트웨어/파라미터/
