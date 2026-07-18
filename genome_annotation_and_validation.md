@@ -54,16 +54,10 @@ Manual_curation을 거친 최종 게놈(`Z.sinica_manualcurated.FINAL_merged2.fa
 - **실행 결과 요약(log_file 발췌):** 입력 29,551서열 중 similarity search 정렬 성공 27,686개(93.69%),
   gene family 할당 26,389개(89.30%), GO term 보유 11,960개(40.47%), KEGG pathway 보유 8,034개
   (27.19%). 전체 러닝타임 217분.
-- **주의 — 최상위 `EnTAP/` 디렉토리는 별도의, 실패한 실행이다:** 프로젝트 루트에 있는 최상위
-  `EnTAP/` 폴더(`EnTAP.sh`, `EnTAP.log`)는 위 `5_Functional_annotation/`과 **다른 실행**이다.
-  `EnTAP.sh`는 Zoysia 5개 종(Zj, Zj.SRA, Zmt, Zp, Zs) 각각의 `*.genome_braker.codingseq`(염기서열)를
-  한 번에 순차 실행하도록 작성되었고 `--runP`(단백질이 아닌 코딩서열 입력이므로 TransDecoder 프레임
-  선별이 필요)로 실행되었으나, `EnTAP.log`에 따르면 **첫 번째 종(Zj) 처리 중 TransDecoder.LongOrfs
-  호출 단계에서 에러(Error code: 105)가 발생해 실행이 중단**되었다 — 즉 Zoysia_sinica(Zs)
-  차례까지 도달하지도 못했다. 파일 타임스탬프도 2024-02-06(최상위 `EnTAP/`)로 2024-06-11
-  (`5_Functional_annotation/`)보다 앞선다. 따라서 Zoysia_sinica의 실제 기능주석 결과는
-  `5_Functional_annotation/`의 단일-종 단백질 입력 실행이며, 최상위 `EnTAP/`은 폐기된 선행 시도로
-  판단된다.
+- **주의:** 프로젝트 루트의 최상위 `EnTAP/` 폴더(`EnTAP.sh`, `EnTAP.log`)는 위
+  `5_Functional_annotation/`과 **다른, 실패한 실행**이다(Zoysia 5개 종 코딩서열 배치 실행 중 첫
+  종에서 TransDecoder 에러로 중단되어 Zoysia_sinica 차례까지 도달하지 못함, 2024-02-06). 실제 채택된
+  Zoysia_sinica 기능주석 결과는 `5_Functional_annotation/`의 단일-종 단백질 입력 실행(2024-06-11)이다.
 - **부가 분석 — 상동성 비교(AT_Similarity / Os_Similarity):** `5_Functional_annotation/AT_Similarity/`,
   `Os_Similarity/`에서 Zsg(Zoysia sinica) 대표 단백질과 Arabidopsis thaliana(TAIR10),
   Oryza sativa(+ O. indica) 단백질 세트 간 상호 blastp(6fmt)를 수행해 `At2Zsg.6fmt`, `Zs2At.6fmt`,
@@ -156,14 +150,9 @@ Manual_curation을 거친 최종 게놈(`Z.sinica_manualcurated.FINAL_merged2.fa
     --TE Z.sinica_manualcurated.FINAL_merged2.fasta.mod.EDTA.TEanno.gff3_20250201_203533 \
     --gene <유전자 GFF3> -t 150 --overwrite
   ```
-- **실행 이력(로그 2종, 총 3회 시도가 남아있음):** `CentroMinder.log`(1차, 2025-01-31 밤 시작 —
-  TIR-Learner 단계에서 Python 타입힌트 문법 에러(`unsupported operand type(s) for |`)로 TIR
-  서브모듈 실패, 이후 처리 지속되나 최종 완료 여부 로그에 명확히 남아있지 않음),
-  `CentroMinder.log2`(2차, 2025-02-01 오전 — "Genome sequence not found" 에러로 조기 중단),
-  `CentroMinder.log3`(3차, 2025-02-01 — **최종 성공**: TE 40.36%, MAKER masking 18.27%까지 정상
-  완료). `CentroMinder_quartet.log`는 `Z.sinica_manualcurated.FINAL_merged2.fasta.mod.EDTA.TEanno.gff3_20250201_203533`
-  (log3에서 생성된 파일)를 입력으로 사용해 CentroMiner 자체는 20개 염색체 전부에 대해 45초 만에
-  1회로 정상 완료했다 — 즉 EDTA는 재시도가 필요했지만 CentroMiner 본 단계는 1회 성공이다.
+- **최종 성공 실행:** `CentroMinder.log3`(2025-02-01) — EDTA TE 40.36%, MAKER masking 18.27%까지 정상
+  완료. `CentroMinder_quartet.log`는 이 결과(`*.TEanno.gff3_20250201_203533`)를 입력으로 사용해
+  CentroMiner 본 단계를 20개 염색체 전부에 대해 45초 만에 1회 성공으로 완료했다.
 
 ### Step 5. 프로모터 시스-작용요소 분석 (PlantCARE)
 - **소프트웨어(버전):** 커스텀 awk/bash 스크립트로 TSS 상류서열 추출 후 **PlantCARE는 로컬 실행이
@@ -257,13 +246,11 @@ Manual_curation을 거친 최종 게놈(`Z.sinica_manualcurated.FINAL_merged2.fa
   프로모터 시스-작용요소 및 qRT-PCR 검증용 프라이머까지 마련해 게놈 조립·주석의 품질과 생물학적
   활용 가능성을 동시에 뒷받침하려는 목적으로 판단된다(description.txt/README 부재로 인해 폴더/파일명
   기반 추정 — `de_novo_genome_assembly.md`에서 이미 명시된 한계와 동일).
-- 프로젝트 내부의 분기/변형:
-  - 최상위 `EnTAP/`(실패, 다종 배치) vs `5_Functional_annotation/`(성공, 단일종 단백질 입력) — 서로
-    다른 두 차례의 시도이며 후자만 실제 채택된 기능주석 결과다(Step 1 참조).
+- 프로젝트 내부의 분기:
+  - 실제 채택된 기능주석 결과는 `5_Functional_annotation/`(단일종 단백질 입력)이며, 최상위
+    `EnTAP/`은 별도의 실패한 시도다(Step 1 참조).
   - 텔로미어 탐지는 세 게놈 버전(원본 contig/superscaffold/manual-curation 최종본)에 대해 각각
     독립 실행되었고, manual curation 이후에만 완전한 양쪽 텔로미어 검출에 성공했다(Step 3).
-  - 센트로미어 탐지의 전제 단계인 EDTA TE 주석은 3회 재시도 끝에(1·2차 실패, 3차 성공) 완료되었다
-    (Step 4).
   - qRT-PCR 프라이머 설계는 단일 타깃 기본 스크립트 세트 외에, 파랄로그가 여러 개인 타깃을 위한
     MAFFT 보존서열 기반 배치 설계 변형(`Candidates/`)과 전사체 특이적 재실행(`Zsg_Transcriptome_Target/`)
     두 갈래로 확장되었다(Step 6).
@@ -272,4 +259,4 @@ Manual_curation을 거친 최종 게놈(`Z.sinica_manualcurated.FINAL_merged2.fa
 
 | 프로젝트 | 핵심 차이점 요약 | 소프트웨어 버전 차이 | 고유 확장 분석 |
 |---|---|---|---|
-| Zoysia_sinica_Genome_Assembly | 최종 주석 게놈에서 fan-out하는 6개 독립 분석(EnTAP 기능주석, 침수 후보유전자, 텔로미어, 센트로미어, PlantCARE 프로모터 분석, qRT-PCR 프라이머 설계). 최상위 `EnTAP/`은 폐기된 별도 실패 실행이며 실제 채택 결과는 `5_Functional_annotation/`. EDTA(센트로미어 전제단계)는 3회 시도 중 3차만 성공, TeloExplorer는 manual curation 이후 버전에서만 완전 검출 | EnTAP v1.1.0, EggNOG-mapper 2.1.12, EDTA v2.2.2, quarTeT(TeloExplorer/CentroMiner, 버전 확인 필요) | AP2 도메인(PF00847)+MCGG 모티프 기반 ERFVII 침수내성 후보유전자 비교(Amino.py류 Biopython 스크립트, KaKs), TSS 상류서열 추출 후 PlantCARE(외부 웹툴) 시스-작용요소 분석, MAFFT 보존서열 기반 다중 파랄로그 qRT-PCR 배치 설계 |
+| Zoysia_sinica_Genome_Assembly | 최종 주석 게놈에서 fan-out하는 6개 독립 분석(EnTAP 기능주석, 침수 후보유전자, 텔로미어, 센트로미어, PlantCARE 프로모터 분석, qRT-PCR 프라이머 설계). 최상위 `EnTAP/`은 별도 실패 실행이며 실제 채택 결과는 `5_Functional_annotation/`. TeloExplorer는 manual curation 이후 버전에서만 완전 검출 | EnTAP v1.1.0, EggNOG-mapper 2.1.12, EDTA v2.2.2, quarTeT(TeloExplorer/CentroMiner, 버전 확인 필요) | AP2 도메인(PF00847)+MCGG 모티프 기반 ERFVII 침수내성 후보유전자 비교(Amino.py류 Biopython 스크립트, KaKs), TSS 상류서열 추출 후 PlantCARE(외부 웹툴) 시스-작용요소 분석, MAFFT 보존서열 기반 다중 파랄로그 qRT-PCR 배치 설계 |

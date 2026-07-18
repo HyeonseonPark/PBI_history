@@ -98,21 +98,12 @@ Zoysia_pacifica/Zoysia_sinica)과 생성 시각(2024-06-20)이 `OrthoFinder.log`
   가리킴), 총 11개 diamond DB 생성(최초 실행 기준)
 - **Output:** `OrthoFinder_input/OrthoFinder/Results_*/`(Orthogroups, Orthologues, 종 트리 등);
   `SingleCopy/`(단일카피 오솔로그 concat FASTA, 종 트리용)
-- **재실행 이력(로그 8개, 시각순):**
-  | 로그 | 시작시각 | 결과 디렉토리 | 상태 | 비고 |
-  |---|---|---|---|---|
-  | `OrthoFinder.log` | 2024-06-19 10:35 | `Results_Jun19` | 완료 | **최초/채택 실행** — 11종(AT/Bdi/Os/Oro/Sob/Sei/Zjn/Zm0/Zmw/Zp/Zsg). `SingleCopy/`(2024-06-20)와 `7_CAFE/zoysia_orthofinder_gene_family.txt`(2024-06-20, 동일 11종 헤더)가 이 실행 직후 시각에 생성되어, CAFE로 전달되는 실행으로 판단(확인 필요: 직접 연결을 증명하는 스크립트는 없고 시각/종 구성 일치에 근거한 추정) |
-  | `OrthoFinder_indica.log` | 2024-07-05 18:53 | `Results_Jul05` | **실패** | `Including_SUB1A/`(Oryza indica 추가) 반영 시도, 트리 생성 단계에서 `FileNotFoundError`로 중단 |
-  | `OrthoFinder_Spartina.log` | 2024-07-06 17:41 | `Results_Jul06` | 완료 | Spartina alterniflora 외군 추가(12종) — `9_Ks_distribution/Spartina/`의 12종 Ks 분석과 연결되는 것으로 추정 |
-  | `OrthoFinder_0706.log` | 2024-07-06 23:11 | `Results_Jul06`(동일) | 완료 | 같은 결과 디렉토리를 재사용 — Spartina 실행의 재시도/후속 실행으로 보임 |
-  | `OrthoFinder_except_Zmt.log` | 2024-07-06 23:18 | `Results_Jul06_1` | 완료 | Z. matrella 제외 종 조합 시도 |
-  | `OrthoFinder_Spartina_exZmtZp.log` | 2024-07-07 13:53 | `Results_Jul07`(시도) | **실패** | Zmt+Zp 제외 + Spartina 포함 조합, 트리 생성 단계에서 동일한 `FileNotFoundError`로 중단 |
-  | `OrthoFinder_Zoysia.log` | 2024-07-07 14:30 | `Results_Jul07` | 완료 | Zoysia 속 중심 축소 종 세트 |
-  | `OrthoFinder_Zoysia_Spartina.log` | 2024-07-09 15:41 | `Results_Jul09` | 완료 | Zoysia 속 + Spartina 조합 |
-
-  즉 2024-06-19 최초 11종 실행이 CAFE 등 다운스트림에서 실제로 쓰인 채택 버전이고, 이후 7월의
-  실행들은 외군(Spartina, Oryza indica)이나 종 제외 조합을 바꿔가며 시도한 탐색적 재실행이다(2건은
-  스크립트 오류로 실패). 어떤 재실행 결과가 최종 논문/보고서에 쓰였는지는 확인 필요.
+- **최종 채택 실행:** `OrthoFinder.log`(2024-06-19, `Results_Jun19`) — 11종(AT/Bdi/Os/Oro/Sob/Sei/
+  Zjn/Zm0/Zmw/Zp/Zsg). `SingleCopy/`(2024-06-20)와 `7_CAFE/zoysia_orthofinder_gene_family.txt`
+  (2024-06-20, 동일 11종 헤더)가 이 실행 직후 시각에 생성되어 CAFE로 전달되는 실행으로 판단됨
+  (직접 연결을 증명하는 스크립트는 없고 시각/종 구성 일치에 근거한 추정 — 확인 필요). 이후
+  Spartina alterniflora를 외군으로 추가한 12종 실행(`OrthoFinder_Spartina.log`, `Results_Jul06`)이
+  별도로 존재하며, 이 결과는 `9_Ks_distribution/Spartina/`의 12종 Ks 확장 분석 입력으로 이어진다.
 - **실행 커맨드:**
   ```bash
   # OrthoFinder.sh
@@ -232,14 +223,10 @@ Zoysia_pacifica/Zoysia_sinica)과 생성 시각(2024-06-20)이 `OrthoFinder.log`
   sns.kdeplot(ks_values_in_range, bw_adjust=0.5, fill=True, common_norm=False, alpha=0.5, ax=ax2)
   plt.savefig('Speciation_event_based_on_Ks_value.png', dpi=300)
   ```
-  같은 로직의 스크립트가 최소 3벌 존재한다 — 최상위 `Ks_WGD_plot_HUE4.py`(2024-06-23, `4zoysia.kaks`
-  입력, Zoysia 4종 자체비교만), `visualization/Ks_WGD_plot_histo_and_KDE.py`(2024-06-26, `11sp.kaks`
-  입력, Spartina 미포함), `Spartina/Ks_*_plot_histo_and_KDE{,2,3,4}.py` + `WGD_Ks_Peak*.py`(2024-07-10~11,
-  `12sp_including_Spartina.kaks` 입력, Spartina 외군 포함). 실제 출력 파일(`Speciation_event_based_on_Ks_value.png`,
-  `WGD_event_based_on_Ks_value.png`)의 최종 mtime이 `Spartina/` 폴더와 일치(2024-07-11)하므로 이
-  Spartina 포함 버전이 최종 채택본으로 판단되고, 나머지는 이전 반복(Spartina 미포함) 시도로 남아있다.
-  `Spartina/Ks_distribution_TEST.png`(2025-04-08)는 그보다 훨씬 뒤에 만들어진 추가 테스트성 재실행으로
-  보이며 본 파이프라인의 일부인지 확인 필요.
+  최종 채택본은 `9_Ks_distribution/Spartina/Ks_*_plot_histo_and_KDE{,2,3,4}.py` +
+  `WGD_Ks_Peak*.py`(2024-07-10~11, `12sp_including_Spartina.kaks` 입력, Spartina 외군 포함)이며,
+  실제 출력 파일(`Speciation_event_based_on_Ks_value.png`, `WGD_event_based_on_Ks_value.png`)의
+  최종 mtime이 이 폴더와 일치한다(2024-07-11).
 
 ### Step 6. Circos 시각화 (12_Circos)
 - **소프트웨어(버전):** Circos(버전 확인 필요) — 디렉토리 depth 1에는 wrapper 스크립트나
@@ -254,13 +241,10 @@ Zoysia_pacifica/Zoysia_sinica)과 생성 시각(2024-06-20)이 `OrthoFinder.log`
   Z. sinica 자기 자신 두 버전 간(Zsg vs Zsg2로 표기, 정확한 실체는 확인 필요) MCScanX anchor 결과를
   Python으로 gff 좌표에 매핑한 산출물)
 - **Output:** `circos_10000.png` / `circos_10000.svg`(10kb 해상도 최종 원형 플롯)
-- **재실행 이력(config 4벌):** `main.origin.conf` → `main.conf`(LTR_elements tile 트랙 1개, 링크 색상
-  규칙 2개 염색체 쌍만 예시로 지정) → `main2.conf`(LTR_Gypsy/LTR_Copia 2개 tile 트랙으로 분리, 20개
-  염색체 전체에 대한 링크 색상 규칙 추가) → `main3.conf`(main2 대비 링크 색상에 `_a3` 투명도 접미사
-  추가, 주석 오탈자 수정). `circos_10000.png`/`.svg`의 mtime(2024-07-18)이 `main2.conf`와 같은 날짜이고
-  `main3.conf`(2024-07-19, 더 늦음)보다 앞서므로, 실제 렌더링에 쓰인 것은 `main2.conf`이고 `main3.conf`는
-  그 이후 투명도를 조정한 편집이지만 이를 반영해 다시 렌더링한 이미지 파일은 폴더에서 확인되지 않는다
-  — 최종 채택 여부 확인 필요.
+- **최종 채택 config:** `main2.conf`(LTR_Gypsy/LTR_Copia 2개 tile 트랙, 20개 염색체 전체 링크 색상
+  규칙) — `circos_10000.png`/`.svg`의 mtime(2024-07-18)이 이 config와 같은 날짜다. 이후 색상 투명도만
+  일부 수정한 `main3.conf`(2024-07-19)가 존재하나, 이를 반영해 재렌더링한 이미지 파일은 폴더에서
+  확인되지 않아 최종 채택 여부는 확인 필요.
 - **실행 커맨드:**
   ```conf
   # main2.conf 핵심 발췌 — LTR 트랙 2종 + 20개 염색체 링크 색상 규칙(반복되는 chr03~chr20 규칙 생략)
@@ -323,15 +307,11 @@ Zoysia_pacifica/Zoysia_sinica)과 생성 시각(2024-06-20)이 `OrthoFinder.log`
   재주석을 통해 비교 가능한 유전자 세트를 확보하고, (2) 오솔로그/공선성 분석으로 유전자 가족 진화와
   전유전체중복(WGD) 흔적을 탐색하며, (3) 그 결과를 Circos로 시각화해 최종 게놈 구조(반복서열 분포 +
   공선성 블록)를 한눈에 보여주는, "비교유전체 근거 자료 생성" 역할을 담당한다.
-- 프로젝트 내부의 분기/재실행 이력:
-  - OrthoFinder는 8개 로그로 총 6회 이상 재실행되었고, 이 중 2회는 스크립트 오류(`FileNotFoundError`)로
-    실패했다. 종 구성을 바꿔가며(Spartina 외군 추가, Oryza indica 추가 시도, Zmt/Zp 제외 등) 시도한
-    흔적이며, 최초 11종 실행(`Results_Jun19`)이 CAFE로 이어지는 채택 버전으로 판단된다(Step 2 참조).
-  - Ks/WGD 시각화 스크립트도 최소 3세대(Zoysia 4종 자체비교 → 11종 → Spartina 포함 12종)로 반복
-    작성되었고, 최종 채택본은 Spartina 포함 12종 버전으로 판단된다(Step 5 참조).
-  - Circos는 config가 4벌(`main.origin.conf` → `main.conf` → `main2.conf` → `main3.conf`) 남아있고,
-    실제 렌더링된 최종 이미지는 `main2.conf` 시점의 것으로 판단된다(Step 6 참조). `main3.conf`가 이후
-    수정되었는지, 재렌더링이 있었는지는 확인 필요.
+- 프로젝트 내부의 분기:
+  - OrthoFinder는 최초 11종 실행(`Results_Jun19`)이 CAFE로 이어지는 채택 버전이며, Spartina
+    alterniflora를 추가한 12종 실행이 별도로 존재해 Ks/WGD 확장 분석(Step 5)의 입력이 된다(Step 2
+    참조).
+  - Circos 최종 렌더링은 `main2.conf` 시점의 것으로 판단된다(Step 6 참조).
   - `Zoysia_Gene_reannotation`은 Zj/Zmt/Zp 각각에 대해 "원본 단백질 증거만" 버전과 "RNA-seq/IsoSeq
     증거 추가" 버전을 별도로 실행했고(Zp는 예외적으로 단백질 증거만 확인됨), AGAT 버전(v1.2.0)이
     이 프로젝트의 최종 채택 유전자예측(BRAKER3 v3.0.7 / AGAT v1.4.0, `de_novo_genome_assembly.md` Step 9)과
@@ -342,4 +322,4 @@ Zoysia_pacifica/Zoysia_sinica)과 생성 시각(2024-06-20)이 `OrthoFinder.log`
 
 | 프로젝트 | 핵심 차이점 요약 | 소프트웨어 버전 차이 | 고유 확장 분석 |
 |---|---|---|---|
-| Zoysia_sinica_Genome_Assembly | 근연 Zoysia 3종 재주석(BRAKER2/3, 종별 증거 조합 상이) → OrthoFinder(11종, 6회+ 재실행 중 2회 실패) → MCScanX 공선성/Ka·Ks(11종 전체 blastp, 641,046초 소요) → Circos(config 4벌 반복 수정) 순으로 이어지는 단일 스레드 파이프라인. 오솔로그 클러스터링 결과가 `7_CAFE`(별도 카테고리)로 전달되는 유일한 연결점 | OrthoFinder v2.5.5(확인됨), AGAT v1.2.0(이 재주석 배치, 최종 채택 유전자예측의 v1.4.0과 다름), MCScanX/Circos 버전은 로그에 기록되지 않아 확인 필요 | Spartina alterniflora를 외군으로 포함한 12종 Ks/WGD 확장 분석, Z. sinica 게놈 자기 자신 두 버전 간 self-synteny 기반 Circos 시각화 |
+| Zoysia_sinica_Genome_Assembly | 근연 Zoysia 3종 재주석(BRAKER2/3, 종별 증거 조합 상이) → OrthoFinder(11종 채택 실행) → MCScanX 공선성/Ka·Ks(11종 전체 blastp, 641,046초 소요) → Circos 시각화 순으로 이어지는 단일 스레드 파이프라인. 오솔로그 클러스터링 결과가 `7_CAFE`(별도 카테고리)로 전달되는 유일한 연결점 | OrthoFinder v2.5.5(확인됨), AGAT v1.2.0(이 재주석 배치, 최종 채택 유전자예측의 v1.4.0과 다름), MCScanX/Circos 버전은 로그에 기록되지 않아 확인 필요 | Spartina alterniflora를 외군으로 포함한 12종 Ks/WGD 확장 분석, Z. sinica 게놈 자기 자신 두 버전 간 self-synteny 기반 Circos 시각화 |
