@@ -226,7 +226,9 @@ Zoysia_pacifica/Zoysia_sinica)과 생성 시각(2024-06-20)이 `OrthoFinder.log`
   최종 채택본은 `9_Ks_distribution/Spartina/Ks_*_plot_histo_and_KDE{,2,3,4}.py` +
   `WGD_Ks_Peak*.py`(2024-07-10~11, `12sp_including_Spartina.kaks` 입력, Spartina 외군 포함)이며,
   실제 출력 파일(`Speciation_event_based_on_Ks_value.png`, `WGD_event_based_on_Ks_value.png`)의
-  최종 mtime이 이 폴더와 일치한다(2024-07-11).
+  최종 mtime이 이 폴더와 일치한다(2024-07-11). 다만 같은 폴더의 `Ks_distribution_TEST.png`는
+  이보다 9개월 뒤인 2025-04-08에 생성되어 있어, 이것이 그 이후 추가 재검토/최종 확정본인지 여부는
+  확인 필요.
 
 ### Step 6. Circos 시각화 (12_Circos)
 - **소프트웨어(버전):** Circos(버전 확인 필요) — 디렉토리 depth 1에는 wrapper 스크립트나
