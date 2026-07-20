@@ -1,4 +1,4 @@
-# 유전체 주석 및 실험 검증 (Zoysia_sinica_Genome_Assembly)
+# 유전체 주석 및 실험 검증 (Zoysia_sinica_Genome_Assembly, Rubus_Pangenome_Project)
 
 ## 1. 공통 파이프라인
 
@@ -255,8 +255,19 @@ Manual_curation을 거친 최종 게놈(`Z.sinica_manualcurated.FINAL_merged2.fa
     MAFFT 보존서열 기반 배치 설계 변형(`Candidates/`)과 전사체 특이적 재실행(`Zsg_Transcriptome_Target/`)
     두 갈래로 확장되었다(Step 6).
 
+### Rubus_Pangenome_Project
+- 연구목적/샘플 설계: 4개 근연 Rubus 종(Rco/Rcra/Rpho/Rta) × hap1/hap2, 총 8개
+  haplotype-resolved 어셈블리를 대상으로 한 4종 pangenome 비교유전체 연구. 반복서열/유전자 주석
+  이후 게놈 완결성 QC(LAI), flavonoid 생합성 경로 효소 동정(KIPEs), 종별 RNA-seq 발현분석
+  (Gene_Expression), ellagic acid 생합성 경로 유전자 분석, 공개 유전체 데이터베이스 제출
+  (Public_Upload)로 이어진다.
+- 공통 파이프라인과의 차이점: 반복서열 마스킹+유전자예측 단계가 두 개의 브랜치
+  (Repeat_elements+RepeatMasker_Braker3 vs panEDTA+EDTA_Braker3)로 병행 실행된 뒤, 이후의
+  LAI/KIPEs/Gene_Expression/Ellagic acid 분석들이 그 채택된 유전자주석 산출물을 재사용한다.
+
 ## 3. 요약 비교표
 
 | 프로젝트 | 핵심 차이점 요약 | 소프트웨어 버전 차이 | 고유 확장 분석 |
 |---|---|---|---|
 | Zoysia_sinica_Genome_Assembly | 최종 주석 게놈에서 fan-out하는 6개 독립 분석(EnTAP 기능주석, 침수 후보유전자, 텔로미어, 센트로미어, PlantCARE 프로모터 분석, qRT-PCR 프라이머 설계). 최상위 `EnTAP/`은 별도 실패 실행이며 실제 채택 결과는 `5_Functional_annotation/`. TeloExplorer는 manual curation 이후 버전에서만 완전 검출 | EnTAP v1.1.0, EggNOG-mapper 2.1.12, EDTA v2.2.2, quarTeT(TeloExplorer/CentroMiner, 버전 확인 필요) | AP2 도메인(PF00847)+MCGG 모티프 기반 ERFVII 침수내성 후보유전자 비교(Amino.py류 Biopython 스크립트, KaKs), TSS 상류서열 추출 후 PlantCARE(외부 웹툴) 시스-작용요소 분석, MAFFT 보존서열 기반 다중 파랄로그 qRT-PCR 배치 설계 |
+| Rubus_Pangenome_Project | 반복서열 마스킹+유전자예측이 RepeatMasker_Braker3/panEDTA+EDTA_Braker3 두 브랜치로 병행 실행된 뒤 후속 분석이 채택된 산출물을 재사용하는 순차 구조 | (개별 툴 버전은 원본 스크립트에서 확인) | Flavonoid 생합성 경로 효소 동정(KIPEs), Ellagic acid 생합성 경로 유전자 중복/발현 분석, 종별 RNA-seq 발현분석(Gene_Expression), 공개 유전체 데이터베이스 제출(Public_Upload) |

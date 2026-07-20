@@ -1,4 +1,4 @@
-# 비교유전체 분석 (Zoysia_sinica_Genome_Assembly)
+# 비교유전체 분석 (Zoysia_sinica_Genome_Assembly, Rubus_Pangenome_Project)
 
 ## 1. 공통 파이프라인
 
@@ -320,8 +320,24 @@ Zoysia_pacifica/Zoysia_sinica)과 생성 시각(2024-06-20)이 `OrthoFinder.log`
     다르다 — 이는 이 재주석 배치가 그 최종 실행과는 별개의(아마 비교유전체 전용) 부가 실행이었음을
     시사한다.
 
+### Rubus_Pangenome_Project
+- 연구목적/샘플 설계: *Rubus*(산딸기속) 4개 근연종(Rco/Rcra/Rpho/Rta) 각 hap1/hap2
+  haplotype-resolved 어셈블리를 대상으로, `references/download.sh`로 확보한 공개 Rubus/Rosaceae
+  참조 유전체(R. argutus, R. chingii, R. idaeus, R. sachalinensis, R. niveus 등)와 비교유전체
+  분석을 수행한다.
+- 공통 파이프라인과의 차이점: 4개 분석이 위 공개 참조 유전체를 공통 입력으로 사용한다 —
+  OrthoFinder v2.5.5(로그 헤더에서 확인)를 이용한 오솔로그 클러스터링, panEDTA를 이용한
+  pan-genome TE 라이브러리 구축, Syri를 이용한 유전체 쌍별 구조변이 탐지 및 plotsr 시각화,
+  CHROMEISTER를 이용한 전장 유전체 점도표 비교.
+- 실행 커맨드(스크립트에서 직접 확인된 것):
+  ```bash
+  # OrthoFinder (OrthoFinder.sh)
+  orthofinder.py -f OrthoFinder_input/ -a 200 -M msa -X
+  ```
+
 ## 3. 요약 비교표
 
 | 프로젝트 | 핵심 차이점 요약 | 소프트웨어 버전 차이 | 고유 확장 분석 |
 |---|---|---|---|
 | Zoysia_sinica_Genome_Assembly | 근연 Zoysia 3종 재주석(BRAKER2/3, 종별 증거 조합 상이) → OrthoFinder(11종 채택 실행) → MCScanX 공선성/Ka·Ks(11종 전체 blastp, 641,046초 소요) → Circos 시각화 순으로 이어지는 단일 스레드 파이프라인. 오솔로그 클러스터링 결과가 `7_CAFE`(별도 카테고리)로 전달되는 유일한 연결점 | OrthoFinder v2.5.5(확인됨), AGAT v1.2.0(이 재주석 배치, 최종 채택 유전자예측의 v1.4.0과 다름), MCScanX/Circos 버전은 로그에 기록되지 않아 확인 필요 | Spartina alterniflora를 외군으로 포함한 12종 Ks/WGD 확장 분석, Z. sinica 게놈 자기 자신 두 버전 간 self-synteny 기반 Circos 시각화 |
+| Rubus_Pangenome_Project | 4개 근연종(Rco/Rcra/Rpho/Rta) haplotype-resolved 어셈블리와 공개 Rubus/Rosaceae 참조 유전체를 대상으로 OrthoFinder/panEDTA/Syri/CHROMEISTER 4개 분석을 수행 | OrthoFinder v2.5.5(로그 헤더에서 확인) | 공개 참조 유전체(R. argutus/chingii/idaeus/sachalinensis/niveus 등) 대상 pan-genome TE 라이브러리(panEDTA) 및 구조변이(Syri) 분석 |

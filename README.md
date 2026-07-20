@@ -1,24 +1,24 @@
 # 생물정보학 분석 파이프라인 종합 정리
 
-15개 프로젝트(acc1 10개 + acc2 4개 + NAS_Archive 1개)의 실측 기반 파이프라인 문서를 분석
+16개 프로젝트(acc1 10개 + acc2 4개 + NAS_Archive 2개)의 실측 기반 파이프라인 문서를 분석
 목표/방법 기준으로 분류하고, 카테고리 내 공통 파이프라인과 프로젝트별 특이사항을 비교
 정리한 문서 세트입니다. 저장 위치가 아니라 분석 방법 기준으로 분류했으며, 한 프로젝트
 안에서도 분석 목표/방법이 다른 후속 분석은 별도 카테고리 문서로 분리했습니다(아래
-Zoysia_sinica_Genome_Assembly의 비교유전체/진화유전체/주석·검증 3개 문서가 그 예). 이에 따라
-프로젝트 수(15)와 카테고리 문서 수(8)가 서로 다릅니다.
+Zoysia_sinica_Genome_Assembly, Rubus_Pangenome_Project의 비교유전체/진화유전체/주석·검증
+3개 문서가 그 예). 이에 따라 프로젝트 수(16)와 카테고리 문서 수(8)가 서로 다릅니다.
 
 ## 분류 체계
 
 | 카테고리 | 프로젝트 수 | 설명 | 문서 |
 |---|---|---|---|
-| De novo genome assembly | 5 | 장리드(PacBio HiFi/ONT) 시퀀싱 기반 de novo 전장유전체 조립, scaffolding, QC, 유전자/반복서열 주석 | [de_novo_genome_assembly.md](de_novo_genome_assembly.md) |
+| De novo genome assembly | 6 | 장리드(PacBio HiFi/ONT) 시퀀싱 기반 de novo 전장유전체 조립, scaffolding, QC, 유전자/반복서열 주석 | [de_novo_genome_assembly.md](de_novo_genome_assembly.md) |
 | Resequencing 변이탐지 DNA-seq | 2 | 참조 기반 리시퀀싱(bwa-mem2/bwa+GATK)을 통한 QTL 후보 유전자 탐색 또는 분자마커 개발 | [resequencing_dnaseq.md](resequencing_dnaseq.md) |
 | Bulk mRNA-seq 차등발현 | 4 | HISAT2+StringTie 정량 → TMM 정규화 → Trinity/edgeR 차등발현분석 표준 파이프라인 | [bulk_mRNAseq_DE.md](bulk_mRNAseq_DE.md) |
 | Multi-omics/holobiome | 1 | 뿌리 전사체(mRNA-seq) + 근권 메타지놈(16S) 통합 분석(MOFA+) | [multi_omics_holobiome.md](multi_omics_holobiome.md) |
 | Single-cell RNA-seq | 2 | 10X Genomics cellranger 기반 단일세포 전사체 분석(Seurat/R 또는 Scanpy/Python) | [single_cell_rnaseq.md](single_cell_rnaseq.md) |
-| 비교유전체 분석 | 1 | Zoysia_sinica의 OrthoFinder/Ks-MCScanX/Circos 기반 근연종 비교 (Zoysia_sinica_Genome_Assembly의 후속 분석) | [comparative_genomics.md](comparative_genomics.md) |
-| 진화유전체 분석 | 1 | Zoysia_sinica의 CAFE/MCMCTree/PAML 기반 유전자가족진화·분화시기·양성선택 분석 (Zoysia_sinica_Genome_Assembly의 후속 분석) | [evolutionary_genomics.md](evolutionary_genomics.md) |
-| 유전체 주석 및 실험 검증 | 1 | Zoysia_sinica의 EnTAP 기능주석, 구조유전체(텔로미어/센트로미어), qRT-PCR 검증 (Zoysia_sinica_Genome_Assembly의 후속 분석) | [genome_annotation_and_validation.md](genome_annotation_and_validation.md) |
+| 비교유전체 분석 | 2 | OrthoFinder/Ks-MCScanX/Circos/SyRI/panEDTA 등 근연종·판게놈 비교 (Zoysia_sinica_Genome_Assembly, Rubus_Pangenome_Project의 후속 분석) | [comparative_genomics.md](comparative_genomics.md) |
+| 진화유전체 분석 | 2 | CAFE/MCMCTree/PAML/SubPhaser/LTR_burst_history 기반 유전자가족진화·분화시기·양성선택·서브게놈 분석 (Zoysia_sinica_Genome_Assembly, Rubus_Pangenome_Project의 후속 분석) | [evolutionary_genomics.md](evolutionary_genomics.md) |
+| 유전체 주석 및 실험 검증 | 2 | EnTAP/KIPEs 기능주석, 구조유전체(텔로미어/센트로미어), 경로 특이 유전자 분석, qRT-PCR/공개배포 검증 (Zoysia_sinica_Genome_Assembly, Rubus_Pangenome_Project의 후속 분석) | [genome_annotation_and_validation.md](genome_annotation_and_validation.md) |
 
 ## 전체 프로젝트 한눈에 보기
 
@@ -29,6 +29,7 @@ Zoysia_sinica_Genome_Assembly의 비교유전체/진화유전체/주석·검증 
 | Abies_koreana_dnDNAseq | acc2 | De novo genome assembly | 구상나무 표준목(제주도)의 전장 유전체 해독 | hifiasm, Oatk, minimap2, seqkit, QUAST | 2026-07 기준 진행 중 프로젝트 — assembly + 사후 organelle 필터링 + QUAST QC까지만 완료, scaffolding/비교유전체/유전자주석은 아직 미수행; BUSCO 미사용 |
 | Zoysia_macrostachya_dnDNAseq | acc2 | De novo genome assembly | Zoysia macrostachya de novo 조립 → Omni-C 스캐폴딩 → 갭클로징 → 주석 → 비교유전체(분화시기/유전자가족진화/양성선택) | Ratatosk, NextDenovo/NextPolish/ntLink, HapHiC, Juicebox, YagCloser, BRAKER3+TSEBRA, OrthoFinder, MCMCTree, CAFE5 | Hi-C 기반 de novo 스캐폴딩 사용(HapHiC); pan-genome 비교 + 염스트레스 SRA 전사체 재분석까지 포함한 복합적인 파이프라인 |
 | Zoysia_sinica_Genome_Assembly | NAS_Archive | De novo genome assembly | *Zoysia sinica*(갯벌잔디) de novo 전장유전체 조립 및 주석(연구목적은 description.txt 부재로 폴더/파일명 기반 추정) | yahs/SALSA2/3D-DNA(Hi-C 스캐폴딩), RagTag, BUSCO, QUAST, Merqury, RepeatModeler/RepeatMasker, BRAKER3(v3.0.7), AGAT(v1.4.0) | 원시 de novo assembly 단계가 접근 불가 디렉토리(`Original/`)에서 수행되어 검증 자체가 불가능(5개 프로젝트 중 불확실 항목이 가장 많음); Hi-C 스캐폴딩 툴 3종(yahs/SALSA2/3D-DNA) 병행 시도 후 yahs 채택; 별도 수동 큐레이션(Manual_curation) 단계 보유. de novo 조립 이후 후속 분석(비교유전체·진화유전체·기능주석/검증)은 별도 문서 3개로 분리 — comparative_genomics.md, evolutionary_genomics.md, genome_annotation_and_validation.md 참조 |
+| Rubus_Pangenome_Project | NAS_Archive | De novo genome assembly | *Rubus*(산딸기속) 4개 근연종(Rco/Rcra/Rpho/Rta) haplotype-resolved de novo 판게놈 조립 | hifiasm v0.25.0-r726(4종 공통), FastK(Rco/Rcra/Rpho) / jellyfish+GenomeScope v1.0(Rta), oatk v1.0(4종 공통), yahs(Rco/Rcra/Rpho) / AutoHiC(Rta, Juicer v1.6+3D-DNA 180922) | Hi-C 스캐폴딩 도구가 종마다 다름(3종 yahs, 1종 AutoHiC). de novo 조립 이후 후속 분석은 별도 문서 3개로 분리 — comparative_genomics.md, evolutionary_genomics.md, genome_annotation_and_validation.md 참조 |
 | Capsella_rubella_rsDNAseq | acc1 | Resequencing 변이탐지 DNA-seq | *Capsella rubella* 1GR1×22.5 F2 100개체의 flowering time/cauline leaf number 형질 QTL 연구 | fastp, bwa-mem2, GATK4, vcftools, R/qtl2 | 두 참조 계통(Cr1GR1/Cr22.5)으로 alignment 단계부터 완전 병렬 수행, 서로 다른 지점(step09/step10)에서 종료; 최종 후보 유전자 리스트는 Cr22.5 계통에서만 기능주석까지 진행되어 산출 |
 | Actinia_arguat_rsDNAseq | acc2 | Resequencing 변이탐지 DNA-seq | Actinidia arguta(다래) 12품종 구분용 분자마커(rhAmp/IDT genotyping) 개발 | prinseq-lite, bwa, GATK4, vcftools, bcftools, bedtools, PLINK | 단일 참조 게놈, MarkDuplicates 없이 RG 태깅만 수행; QTL이 아닌 SNP/InDel 조합 기반 최소 마커셋 탐색(greedy set-cover)으로 종결 |
 | Panax_ginseng_123w_development_mrRNA-seq | acc1 | Bulk mRNA-seq 차등발현 | 인삼 1년생 1·2·3주차 뿌리 이차 생장 발달 분자 메커니즘 연구 | Trimmomatic, PRINSEQ++, HISAT2, StringTie, edgeR/Trinity, clusterProfiler | 2단계 QC(Trimmomatic+PRINSEQ++, 타 프로젝트와 상이); Diamond 오솔로그 매핑+GO/KEGG+GSEA 후속 분석까지 논문 리비전 단계에서 재작업 완료 |
@@ -42,8 +43,8 @@ Zoysia_sinica_Genome_Assembly의 비교유전체/진화유전체/주석·검증 
 ## 범위 및 원칙
 
 - 대상은 acc1 10개 + acc2 4개(각자 폴더의 기존 `handover_docs`: 01_directory_map.md +
-  02_pipeline_steps.md, 스크립트·로그 실측 교차검증 기반) + NAS_Archive 1개(핸드오버 문서는
-  없었으나 이번 작업에서 직접 스크립트·로그를 실측 검증) 총 15개 프로젝트로 한정합니다.
+  02_pipeline_steps.md, 스크립트·로그 실측 교차검증 기반) + NAS_Archive 2개(핸드오버 문서는
+  없었으나 이번 작업에서 직접 스크립트·로그를 실측 검증) 총 16개 프로젝트로 한정합니다.
   acc1/acc2 중 handover_docs가 없는 프로젝트(acc1: Arabidopsis_scRNAseq_Chungbuk_Prof.Jo,
   Camelina_sativa_genome, Capsella_rubella_dnDNAseq, Capsicum_annum_snRNAseq,
   Larix_kaempferi_mRNAseq, Panax_ginseng_snRNAseq / acc2: GBM_mRNAseq,
@@ -60,8 +61,12 @@ Zoysia_sinica_Genome_Assembly의 비교유전체/진화유전체/주석·검증 
   별도 handover_docs를 남기지 않았습니다. 원시 de novo assembly 단계가 이루어진
   `Original/ONT_longread_DNAseq/` 디렉토리는 조사 시점에 접근 불가(간헐적 NFS 이슈)였어서
   검증하지 못했습니다 — 재확인 필요.
+- Rubus_Pangenome_Project(NAS_Archive)도 description.txt/handover_docs 없이 직접 스크립트·로그를
+  검증했습니다. 다만 이 프로젝트는 검증 과정에서 확정하지 못한 항목(예: 여러 조립 시도 중 어느
+  조합이 최종 채택본인지)이 많았기 때문에, 이 저장소에는 스크립트/로그로 직접 확인된 사실만
+  포함했습니다 — 불확실한 세부사항까지 포함한 상세 버전은 이 저장소 밖에 별도로 보관되어 있습니다.
 - 원본 문서에서 "확인 필요"로 표시된 불확실 항목은 새로 추정하지 않고 각 카테고리
-  문서에 그대로 보존했습니다.
+  문서에 그대로 보존했습니다(단, Rubus_Pangenome_Project는 위 항목에서 설명한 대로 예외).
 - 각 카테고리 문서의 파이프라인 스텝은 표가 아닌 스텝별 서술형(소프트웨어/파라미터/
   Input/Output + 실제 스크립트에서 발췌한 실행 커맨드)으로 정리했습니다. 실행 커맨드는
   각 프로젝트의 실제 `.sh`/`.py`/`.R`/`.pl` 스크립트를 읽고 발췌한 것이며, 반복문/로깅
